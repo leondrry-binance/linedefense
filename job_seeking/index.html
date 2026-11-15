@@ -62,7 +62,11 @@ const LOC=[
  {n:'Kopi Senja',x:150,y:50,k:'job',j:1},
  {n:'PT Sinar Mandiri',x:212,y:108,k:'job',j:2},
  {n:'CV Karya Bersama',x:198,y:34,k:'job',j:3},
- {n:'Nusantara Global',x:274,y:70,k:'job',j:4}
+ {n:'Nusantara Global',x:274,y:70,k:'job',j:4},
+ {n:'Indomaret',x:146,y:86,k:'mart',brand:'indomaret'},
+ {n:'Alfamart',x:284,y:112,k:'mart',brand:'alfamart'},
+ {n:'Warteg Bu Tini',x:86,y:104,k:'warteg'},
+ {n:'Bank & Dealer',x:196,y:134,k:'dealer'}
 ];
 const JOBS=[
  {id:'toko',name:'Toko Maju Jaya',short:'TOKO MAJU JAYA',pos:'Staf Admin Toko',sal:2800000,tier:0,sets:1,edu:0,loc:3,thr:4},
@@ -150,7 +154,7 @@ const CV_CHIPS={
 // ===== State =====
 let S=null,scene='title',cur=null,hits=[],M={x:-1,y:-1},tNow=0,trip=null,iv=null,selDest=-1,cvSel='foto',cvDraft={},hasSave=false;
 function save(){try{localStorage.setItem(SAVEKEY,JSON.stringify(S));}catch(e){}}
-function load(){try{const j=localStorage.getItem(SAVEKEY);if(j){const o=JSON.parse(j);if(o&&o.apps&&o.money!==undefined)return Object.assign({bills:[],daily:30000,life:'normal',leasing:false,connect:false,sold:false,evil:0,crime:0,jail:0,record:false,hustle:0},o);}}catch(e){}return null;}
+function load(){try{const j=localStorage.getItem(SAVEKEY);if(j){const o=JSON.parse(j);if(o&&o.apps&&o.money!==undefined)return Object.assign({bills:[],daily:30000,life:'normal',leasing:false,connect:false,sold:false,evil:0,crime:0,jail:0,record:false,hustle:0,hunger:20,sick:0,stress:0,sAdd:0,car:false,house:false,cc:null,blacklist:false,ojol:false,ojolN:0},o);}}catch(e){}return null;}
 function clearSave(){try{localStorage.removeItem(SAVEKEY);}catch(e){}}
 const LIFE={
  easy:{n:'Easy: Anak Berada',d:'Orang tua mapan. Uang saku besar, surat lengkap, ada kenalan orang dalam. Tanpa utang.'},
@@ -158,18 +162,18 @@ const LIFE={
  hard:{n:'Hard: Dihajar Hidup',d:'Pinjol di mana-mana, motor mau ditarik, kos menunggak, pacar hamil di luar nikah. Uang nyaris habis.'},
  random:{n:'Acak: Takdir Ekstrem',d:'Beban hidup diundi: bisa ada anak dengan biaya sekolah tinggi, orang tua sakit, dan lainnya.'}
 };
-const BILLN={kos:'Tunggakan kos',hp:'Cicilan HP',paylater:'Tagihan paylater',pinjol:'Pinjol',motor:'Cicilan motor',hamil:'Biaya persalinan pacar',sekolah:'SPP & uang gedung anak',sakit:'Obat & rawat ibu',tetangga:'Utang ke tetangga'};
+const BILLN={kos:'Tunggakan kos',hp:'Cicilan HP',paylater:'Tagihan paylater',pinjol:'Pinjol',motor:'Cicilan motor',hamil:'Biaya persalinan pacar',sekolah:'SPP & uang gedung anak',sakit:'Obat & rawat ibu',tetangga:'Utang ke tetangga',warteg:'Utang makan warteg',mobil:'Cicilan mobil',kartu:'Tagihan kartu kredit',rumah:'Cicilan KPR rumah'};
 const r50=n=>Math.round(n/50000)*50000;
 function mkBill(k,amt,due,nm){return {k:k,n:nm||BILLN[k],amt:amt,due:due,late:0,paid:false,tempo:false};}
 function newGame(bg,life){
   life=life||'normal';
   S={bg:bg,life:life,edu:bg==='s1'?2:1,day:1,min:450,money:bg==='s1'?500000:700000,energy:100,at:0,cv:null,hasFoto:false,sets:0,
-     sim:bg==='smk',stnk:bg==='s1',motor:true,leasing:false,conf:0,apps:{},unread:0,bills:[],daily:30000,connect:false,sold:false,evil:0,crime:0,jail:0,record:false,hustle:0};
+     sim:bg==='smk',stnk:bg==='s1',motor:true,leasing:false,conf:0,apps:{},unread:0,bills:[],daily:30000,connect:false,sold:false,evil:0,crime:0,jail:0,record:false,hustle:0,hunger:20,sick:0,stress:0,sAdd:0,car:life==='easy',house:false,cc:life==='easy'?{lim:10000000}:null,blacklist:life==='hard',ojol:false,ojolN:0};
   let intro='Hari pertama mencari kerja. '+(bg==='s1'?'Kamu lulusan S1, tapi belum punya SIM.':'Kamu lulusan SMK, tapi pajak STNK motor mati.');
-  if(life==='easy'){S.money=3000000;S.daily=10000;S.sim=true;S.stnk=true;S.hasFoto=true;S.conf=2;S.connect=true;
+  if(life==='easy'){S.money=3000000;S.daily=5000;S.sim=true;S.stnk=true;S.hasFoto=true;S.conf=2;S.connect=true;
     intro='Hari pertama mencari kerja. Kamu tinggal di rumah orang tua yang berada, uang saku lega, dan ayahmu punya kenalan di beberapa perusahaan.';}
-  else if(life==='normal'){S.bills=[mkBill('hp',150000,6),mkBill('paylater',100000,8)];intro+=' Ada tagihan yang belum terbayar, cek di Urusan lain.';}
-  else if(life==='hard'){S.money=bg==='s1'?300000:350000;S.daily=45000;
+  else if(life==='normal'){S.daily=15000;S.bills=[mkBill('hp',150000,6),mkBill('paylater',100000,8)];intro+=' Ada tagihan yang belum terbayar, cek di Urusan lain.';}
+  else if(life==='hard'){S.money=bg==='s1'?300000:350000;S.daily=20000;
     S.bills=[mkBill('pinjol',600000,4,'Pinjol Kilat'),mkBill('pinjol',400000,6,'Pinjol Cepat Cair'),mkBill('motor',450000,5),mkBill('kos',500000,7),mkBill('hamil',350000,10,'Kontrol kehamilan pacar')];
     intro='Hari pertama mencari kerja. Pinjol menagih, motor mau ditarik leasing, kos menunggak, dan pacarmu hamil di luar nikah. Uang nyaris habis.';}
   else{
@@ -177,12 +181,13 @@ function newGame(bg,life){
     const pool=shuf(['pinjol','motor','hamil','sekolah','sakit','kos']).slice(0,2+rnd(3));
     const rng={pinjol:[400000,900000,3,6],motor:[350000,500000,4,6],hamil:[500000,1200000,8,12],sekolah:[500000,900000,6,9],sakit:[300000,700000,7,10],kos:[300000,500000,5,8]};
     pool.forEach(k=>{const r=rng[k];S.bills.push(mkBill(k,r50(r[0]+rnd(r[1]-r[0])),r[2]+rnd(r[3]-r[2]+1)));});
-    S.daily=30000+(pool.includes('sekolah')?15000:0)+(pool.includes('hamil')?10000:0);
+    S.daily=15000+(pool.includes('sekolah')?10000:0)+(pool.includes('hamil')?8000:0);
     intro='Hari pertama mencari kerja. Takdir mengundi bebanmu: '+pool.map(k=>BILLN[k]).join(', ')+'.';}
   homeMenu(intro);
 }
 function show(art,text,opts,o){cur={art:art,text:text,opts:opts,o:o||{}};scene='say';}
-function advance(m){S.min+=m;if(S.min>=1440){passOut();return true;}return false;}
+function advance(m){S.hunger=Math.min(100,(S.hunger||0)+m/12);S.min+=m;if(S.min>=1440){passOut();return true;}return false;}
+function drain(n){const m=1+(S.stress||0)/100+(S.sick>0?.3:0);S.energy=Math.max(0,S.energy-Math.round(n*m));}
 function passOut(){show({k:'night'},'Hari sudah larut. Kamu kelelahan dan ketiduran. Besok pagi kamu terbangun di kamar kos.',[{l:'Bangun',f:()=>nextDay(true)}]);}
 function cvScore(sl){let s=0,seen={};for(const c of CV_SLOTS){const i=sl[c.k];if(i===undefined)continue;const ch=CV_CHIPS[c.k][i];let v=ch.v;if(c.k==='s1'||c.k==='s2'){if(seen[ch.tag])v=0;seen[ch.tag]=1;}s+=v;}return s;}
 function cvSkills(sl){return ['s1','s2'].map(k=>sl[k]===undefined?null:SK[sl[k]].tag).filter(Boolean);}
@@ -245,8 +250,9 @@ function handlebar(){
   L(140,78,40,18,0);L(142,80,36,14,15);L(159,84,2,8,8);L(146,92,28,1,6);
 }
 function artTrip(p){
-  roadView(p.mode==='motor'?7:4);
-  if(p.mode==='motor'){rearCar(.3,-.5,13);rearCar(.5,.55,2);handlebar();}
+  roadView(p.mode==='motor'||p.mode==='mobil'?7:4);
+  if(p.mode==='mobil'){rearCar(.3,-.5,13);rearCar(.5,.55,2);L(0,72,320,28,15);L(0,70,320,3,13);L(120,62,80,3,13);L(142,78,36,16,13);L(150,82,20,8,15);L(156,70,8,6,12);}
+  else if(p.mode==='motor'){rearCar(.3,-.5,13);rearCar(.5,.55,2);handlebar();}
   else{L(0,0,320,8,10);L(0,0,10,100,10);L(310,0,10,100,10);L(0,70,320,4,12);L(60,60,30,40,15);L(62,56,26,16,5);L(60,72,30,28,6);L(220,62,30,38,15);L(222,58,26,16,4);L(220,74,30,26,8);L(0,96,320,4,4);}
 }
 function artMacet(){
@@ -400,8 +406,31 @@ function artUmkm(){
   L(30,0,130,14,15);T('WARUNG RIAN',95,YO+2,6,1);
   bust(236,-2,{shirt:9,hair:15,talk:1},1.9);L(0,68,320,80,4);L(0,66,320,4,5);L(40,56,40,10,7);L(240,56,30,10,3);
 }
-const ARTS={umkm:artUmkm,preman:artPreman,door:artDoor,wc:artWc,shopin:artShopIn,home:artHome,road:artRoad,trip:artTrip,macet:artMacet,tilang:artTilang,fc:artFc,samsat:artSamsat,bld:artBld,gate:artGate,lobby:artLobby,room:artRoom,night:artNight,win:artWin,lose:artLose};
-const BGX={home:[6,4],fc:[6,4],samsat:[13,4],bld:[3,12],gate:[3,12],night:[1,15],win:[3,10],lose:[12,15],wc:[7,12],door:[6,4],trip:[3,15],macet:[3,15],tilang:[3,15],road:[3,15]};
+function artMart(p){
+  const al=p.brand==='alfamart';
+  L(0,0,320,100,7);L(0,0,320,14,al?8:2);L(0,14,320,3,al?2:8);T(al?'ALFAMART':'INDOMARET',160,YO+2,7,1);
+  for(let r=0;r<3;r++){const y=22+r*22;L(10,y+16,130,3,12);for(let i=0;i<9;i++)L(14+i*14,y+4+((i*r)%3),10,12-((i*r)%3),[8,2,9,10,5,14,3,8,9][(i+r*2)%9]);}
+  L(240,22,66,48,13);L(244,26,58,40,3);for(let i=0;i<4;i++)L(248+i*13,32,9,14,[7,8,9,10][i]);L(244,48,58,2,7);
+  bust(176,-4,{shirt:al?8:2,hair:0,badge:1,talk:1},2.2);
+  L(0,66,320,80,al?8:2);L(0,64,320,4,13);L(60,56,34,8,7);L(256,52,26,12,10);
+}
+function artWarteg(){
+  L(0,0,320,100,6);L(0,0,320,16,10);T('WARTEG BU TINI',160,YO+3,7,1);
+  L(14,26,160,46,12);L(18,30,152,38,3);
+  for(let r=0;r<2;r++)for(let i=0;i<6;i++){L(24+i*24,36+r*18,18,10,[8,9,10,5,14,6][(i+r*3)%6]);L(24+i*24,46+r*18,18,2,7);}
+  bust(240,-4,{shirt:10,hair:15,hijab:9,talk:1},2.2);
+  L(0,68,320,80,4);L(0,66,320,4,5);L(190,56,40,10,7);L(30,58,40,8,3);L(110,58,30,8,9);
+}
+function artDealer(){
+  L(0,0,320,100,7);L(0,0,320,14,9);T('BANK & DEALER',160,YO+2,7,1);
+  L(10,22,170,50,13);L(14,26,162,42,3);
+  L(30,46,110,14,8);L(46,36,76,12,8);L(52,38,28,9,3);L(88,38,28,9,3);L(40,58,16,10,0);L(112,58,16,10,0);L(44,61,8,4,12);L(116,61,8,4,12);
+  L(196,26,48,38,13);L(200,30,40,30,10);L(210,40,8,20,9);L(224,34,10,26,7);
+  bust(264,-4,{shirt:7,hair:0,tie:1,talk:1},2.2);
+  L(0,70,320,30,12);L(0,68,320,3,13);
+}
+const ARTS={dealer:artDealer,mart:artMart,warteg:artWarteg,umkm:artUmkm,preman:artPreman,door:artDoor,wc:artWc,shopin:artShopIn,home:artHome,road:artRoad,trip:artTrip,macet:artMacet,tilang:artTilang,fc:artFc,samsat:artSamsat,bld:artBld,gate:artGate,lobby:artLobby,room:artRoom,night:artNight,win:artWin,lose:artLose};
+const BGX={dealer:[7,12],mart:[7,8],warteg:[6,4],home:[6,4],fc:[6,4],samsat:[13,4],bld:[3,12],gate:[3,12],night:[1,15],win:[3,10],lose:[12,15],wc:[7,12],door:[6,4],trip:[3,15],macet:[3,15],tilang:[3,15],road:[3,15]};
 function bgOf(a){
   if(a.k==='lobby'){const t=JOBS[a.j].tier;return [t===2?3:6,t===2?13:12];}
   if(a.k==='room')return a.who==='psiko'?[7,4]:[6,4];
@@ -429,10 +458,14 @@ function cbtn(x,y,w,h,label,fn,o){
   hits.push({x:x,y:y,w:w,h:h,fn:fn,off:o.off});
 }
 function topbar(){
-  R(0,0,W,12,15);Ts('Hari '+S.day+'  '+clk(S.min),4,2,6);
-  Ts(LOC[S.at].n,84,2,13);
-  Ts(rp(S.money),196,2,11);
-  Ts('E',254,2,7);R(262,3,50,6,12);R(263,4,Math.max(0,Math.round(48*S.energy/100)),4,S.energy>30?10:8);
+  LOC[0].n=S.house?'Rumah Sendiri':'Rumah Kos';
+  R(0,0,W,12,15);Ts('Hari '+S.day+' '+clk(S.min),4,2,6);
+  Ts(S.sick>0?LOC[S.at].n.slice(0,7):LOC[S.at].n,70,2,13);
+  Ts(rp(S.money),150,2,11);
+  Ts('E',192,2,7);R(199,3,38,6,12);R(200,4,Math.max(0,Math.round(36*S.energy/100)),4,S.energy>30?10:8);
+  const k=100-(S.hunger||0);Ts('K',244,2,7);R(251,3,38,6,12);R(252,4,Math.max(0,Math.round(36*k/100)),4,k>40?10:k>20?9:8);
+  const p=S.stress||0;Ts('P',294,2,7);R(300,3,16,6,12);R(301,4,Math.round(14*p/100),4,p<40?10:p<70?9:8);
+  if(S.sick>0)Ts('SAKIT',114,2,8);
 }
 function drawSay(){
   const c=cur;topbar();drawArt(c.art,H-12);
@@ -483,7 +516,7 @@ function mapScene(){
     const sel=i===selDest,here=i===S.at;
     if(sel)R(l.x-9,l.y-9,18,18,8);
     R(l.x-7,l.y-7,14,14,15);
-    const k=l.k==='home'?[5,8]:l.k==='fc'?[3,2]:l.k==='samsat'?[6,10]:JOBS[l.j].tier===2?[2,1]:JOBS[l.j].tier===1?[13,12]:[9,7];
+    const k=l.k==='home'?[5,8]:l.k==='fc'?[3,2]:l.k==='samsat'?[6,10]:l.k==='dealer'?[9,7]:l.k==='mart'?(l.brand==='alfamart'?[8,7]:[2,9]):l.k==='warteg'?[10,9]:JOBS[l.j].tier===2?[2,1]:JOBS[l.j].tier===1?[13,12]:[9,7];
     R(l.x-6,l.y-6,12,12,k[0]);R(l.x-6,l.y-6,12,4,k[1]);
     if(here){R(l.x-3,l.y-16,6,5,7);R(l.x-1,l.y-11,2,3,7);}
     const tw2=tw(l.n,'s');const lx=Math.max(2,Math.min(W-tw2-2,l.x-tw2/2|0));
@@ -495,10 +528,15 @@ function mapScene(){
     T('Pilih tujuan di peta. Kamu di: '+LOC[S.at].n,8,154,15,0);
     cbtn(8,176,100,16,'Kembali',()=>{selDest=-1;hereMenu();},{});
   }else{
-    const b=baseMin(S.at,selDest),tm=b,ta=Math.round(b*1.5+10);
+    const b=baseMin(S.at,selDest),tm=b;
     T('Ke: '+LOC[selDest].n,8,154,15,0);
+    if(S.car){Ts('Mobil: ~'+tm+' mnt, bensin Rp 15rb, AC, hemat energi',8,166,12);Ts('Motor Rp 5rb | Angkot 1-2 jam Rp 8rb',8,175,12);
+      cbtn(8,185,60,13,'Mobil',()=>startTrip(selDest,'mobil'),{off:S.money<15000});
+      cbtn(72,185,60,13,S.motor?'Motor':'Disita',()=>startTrip(selDest,'motor'),{off:!S.motor||S.money<5000});
+      cbtn(136,185,60,13,'Angkot',()=>startTrip(selDest,'angkot'),{off:S.money<8000});
+      cbtn(200,185,60,13,'Batal',()=>{selDest=-1;},{});return;}
     Ts('Motor: ~'+tm+' mnt, Rp 5rb, bisa macet/razia',8,166,12);
-    Ts('Angkot: ~'+ta+' mnt, Rp 8rb, lebih aman',8,175,12);
+    Ts('Angkot: 1-2 jam, Rp 8rb, lebih aman tapi capek',8,175,12);
     cbtn(8,185,92,13,S.motor?'Naik motor':'Motor disita',()=>startTrip(selDest,'motor'),{off:!S.motor||S.money<5000});
     cbtn(106,185,92,13,'Naik angkot',()=>startTrip(selDest,'angkot'),{off:S.money<8000});
     cbtn(204,185,60,13,'Batal',()=>{selDest=-1;},{});
@@ -506,17 +544,25 @@ function mapScene(){
 }
 function drawTrip(){topbar();drawArt({k:'trip',t:Math.min(1.5,trip.t),mode:trip.mode},H-12);
   g.globalAlpha=.94;R(0,H-34,W,34,15);R(2,H-32,W-4,30,6);g.globalAlpha=1;R(0,H-34,W,2,9);
-  T(trip.mode==='motor'?'Berangkat naik motor...':'Naik angkot, duduk berdesakan...',8,H-29,15,0);T('Menuju '+LOC[trip.to].n,8,H-16,12,0);}
+  T(trip.mode==='mobil'?'Berangkat naik mobil, AC menyala...':trip.mode==='motor'?'Berangkat naik motor...':'Naik angkot, duduk berdesakan...',8,H-29,15,0);T('Menuju '+LOC[trip.to].n,8,H-16,12,0);}
 
 // ===== Perjalanan =====
 function dist(a,b){return Math.hypot(LOC[a].x-LOC[b].x,LOC[a].y-LOC[b].y);}
 function baseMin(a,b){return 8+Math.round(dist(a,b)*0.2);}
 function isRush(m){const h=m/60;return (h>=6&&h<9.5)||(h>=16&&h<19.5);}
 function startTrip(to,mode){
-  S.money-=mode==='motor'?5000:8000;
-  trip={from:S.at,to:to,mode:mode,t:0,base:baseMin(S.at,to),extra:0,done:false};selDest=-1;scene='trip';
+  S.money-=mode==='mobil'?15000:mode==='motor'?5000:8000;
+  const bm=baseMin(S.at,to);trip={from:S.at,to:to,mode:mode,t:0,base:bm,extra:0,done:false,adur:Math.min(120,Math.max(60,Math.round(50+bm*.9+rnd(26))))};selDest=-1;scene='trip';
 }
 function resolveTrip(){
+  if(trip.mode==='mobil'){
+    if(Math.random()<(isRush(S.min)?.5:.15)){
+      const ex=15+rnd(20);
+      show({k:'macet'},'Macet di depan. Di dalam mobil ber-AC kamu tetap tenang, memutar lagu sambil menunggu. Telat sekitar '+ex+' menit.',[{l:'Sabar, nyetel musik',f:()=>tripPolice(ex,false)}]);
+      return;
+    }
+    tripPolice(0,false);return;
+  }
   if(trip.mode==='motor'){
     if(Math.random()<(isRush(S.min)?.65:.25)){
       const ex=20+rnd(30);
@@ -544,17 +590,17 @@ function seized(next){
   show({k:'tilang'},'Uangmu tidak cukup. Motor ditahan polisi. Tebus di Samsat (Rp 100rb) kalau sudah punya uang. Kamu melanjutkan dengan angkot.',[{l:'Lanjut',f:()=>{trip.extra+=40;next();}}]);
 }
 function finishTrip(){
-  const dur=(trip.mode==='motor'?trip.base:Math.round(trip.base*1.5+10))+trip.extra;
-  S.energy=Math.max(0,S.energy-(trip.mode==='motor'?5:9));
+  const dur=(trip.mode==='angkot'?trip.adur:trip.base)+trip.extra;
+  drain(trip.mode==='mobil'?1:trip.mode==='motor'?5:12);
   if(advance(dur))return;
   S.at=trip.to;arrived();
 }
-function hereMenu(t){const k=LOC[S.at].k;if(k==='home')homeMenu(t);else if(k==='fc')fcMenu(t);else if(k==='samsat')samsatMenu(t);else jobMenu(LOC[S.at].j,t);}
+function hereMenu(t){const k=LOC[S.at].k;if(k==='home')homeMenu(t);else if(k==='mart')martMenu(t);else if(k==='dealer')dealerMenu(t);else if(k==='warteg')wartegMenu(t);else if(k==='fc')fcMenu(t);else if(k==='samsat')samsatMenu(t);else jobMenu(LOC[S.at].j,t);}
 function arrived(){hereMenu();}
 function openCheck(lo){
-  const h=S.min/60;const k=LOC[lo].k,r=k==='fc'?[7,21]:k==='samsat'?[8,15]:[8,17];
+  const h=S.min/60;const k=LOC[lo].k;if(k==='mart')return true;const r=k==='fc'||k==='warteg'?[7,21]:k==='samsat'?[8,15]:k==='dealer'?[9,18]:[8,17];
   if(h>=r[0]&&h<r[1])return true;
-  show({k:k==='fc'?'fc':k==='samsat'?'samsat':'bld',j:LOC[lo].j},'Tempat ini tutup. Jam buka: '+r[0]+':00 - '+r[1]+':00.',[{l:'Ke peta',f:()=>{scene='map';}}]);return false;
+  show({k:k==='fc'?'fc':k==='samsat'?'samsat':k==='warteg'?'warteg':'bld',j:LOC[lo].j},'Tempat ini tutup. Jam buka: '+r[0]+':00 - '+r[1]+':00.',[{l:'Ke peta',f:()=>{scene='map';}}]);return false;
 }
 
 // ===== Rumah =====
@@ -562,7 +608,7 @@ function openBills(){return S.bills.filter(b=>!b.paid);}
 function homeMenu(t){
   save();
   const nb=openBills().length;
-  show({k:'home'},t||('Kamar kos kecilmu. Laptop menyala, kopi sachet sudah dingin. Waktunya cari kerja.'+(nb?' Tagihan belum lunas: '+nb+'.':'')),[
+  show({k:'home'},t||((S.house?'Rumah cicilanmu, kecil tapi milikmu sendiri. Laptop':'Kamar kos kecilmu. Laptop')+' menyala, kopi sachet sudah dingin. Waktunya cari kerja.'+(nb?' Tagihan belum lunas: '+nb+'.':'')+(S.hunger>=60?' Perutmu keroncongan.':'')+(S.sick>0?' Kamu sedang '+S.sickK+'.':'')),[
     {l:S.cv?'Ubah CV':'Buat CV',f:cvOpen},
     {l:'Cari lowongan',f:jobList},
     {l:'Cek email'+(S.unread?' ('+S.unread+')':''),f:inbox},
@@ -577,6 +623,7 @@ function moreMenu(t){
     {l:'Kerja sampingan',f:gigMenu},
     {l:'Bayar tagihan'+(nb?' ('+nb+')':''),f:()=>billsMenu()},
     {l:'Pinjam uang tetangga',f:()=>loanMenu()},
+    {l:'Kartu kredit',f:()=>cardMenu()},
     {l:'Catatan hidup',f:lifeNote},
     {l:'Kembali',f:()=>homeMenu()}]);
 }
@@ -585,14 +632,15 @@ function moreMenu(t){
 function pickCollector(){
   for(const b of S.bills){
     if(b.paid||S.day<=b.due||(b.hold&&S.day<=b.hold))continue;
-    const p=b.k==='tetangga'?(b.late<=1?1:.5):b.k==='pinjol'?.6:b.k==='kos'?.4:b.k==='motor'?.35:0;
+    const p=b.k==='warteg'?.5:b.k==='tetangga'?(b.late<=1?1:.5):b.k==='pinjol'?.6:b.k==='kos'?.4:b.k==='motor'?.35:b.k==='mobil'?.35:b.k==='kartu'?.4:b.k==='rumah'?.3:0;
     if(p&&Math.random()<p)return b;
   }
   return null;
 }
 function collectScene(b,msg){
-  const who=(b.k==='pinjol'||b.k==='motor')?'dc':b.k==='kos'?'kos':'tet';
-  const line=who==='dc'?'Pintumu digedor keras. Debt collector '+(b.k==='motor'?'leasing':'pinjol')+' berdiri di depan: "Tagihan '+rp(b.amt)+' sudah telat! Mau bayar atau kami bawa barangmu?"'
+  const who=(b.k==='kartu'||b.k==='pinjol'||b.k==='motor'||b.k==='mobil'||b.k==='rumah')?'dc':(b.k==='kos'||b.k==='warteg')?'kos':'tet';
+  const line=who==='dc'?'Pintumu digedor keras. Debt collector '+(b.k==='motor'||b.k==='mobil'?'leasing':b.k==='rumah'||b.k==='kartu'?'bank':'pinjol')+' berdiri di depan: "Tagihan '+rp(b.amt)+' sudah telat! Mau bayar atau kami bawa barangmu?"'
+    :b.k==='warteg'?'Ibu warteg datang ke kosmu: "Mas, utang makan '+rp(b.amt)+' kapan dibayar? Jangan lupa ya."'
     :who==='kos'?'Ibu kos mengetuk pintu: "Nak, '+b.n+' '+rp(b.amt)+' kapan dibayar? Sudah telat ya."'
     :'Tetanggamu mengetuk pintu: "Mas, utang '+rp(b.amt)+' yang kemarin kapan dibayar? Katanya cuma sebentar."';
   const done=m=>{homeMenu(msg+'\n'+m);};
@@ -697,9 +745,7 @@ function goJail(d){
 function gigMenu(t){
   const ok=S.min<20*60&&S.energy>=30;
   show({k:'home'},t||'Cari uang tambahan. Butuh energi minimal 30 dan harus sebelum jam 20:00.\nUangmu: '+rp(S.money),[
-    {l:'Narik ojol (+Rp 100rb)',off:!ok||!S.motor,f:()=>{
-      const sepi=Math.random()<.25,g=sepi?50000:120000;S.money+=g-20000;S.hustle++;S.energy-=25;if(advance(180))return;
-      moreMenu(sepi?'Order sepi sekali. Bersih hanya '+rp(g-20000)+'.':'Tiga jam narik ojol, bersih '+rp(g-20000)+' setelah bensin.');}},
+    {l:'Ojol (mitra aplikasi)',off:S.min>=22*60,f:()=>ojolMenu()},
     {l:'Serabutan (+Rp 80rb)',off:!ok,f:()=>{S.money+=80000;S.hustle++;S.energy-=30;if(advance(240))return;moreMenu('Kerja serabutan empat jam, dapat '+rp(80000)+'.');}},
     {l:'Parkir liar (gelap)',off:!ok,f:parkirLiar},
     {l:'Jual HP lama (+Rp 150rb)',off:S.sold,f:()=>{S.sold=true;S.money+=150000;if(advance(60))return;moreMenu('HP lamamu laku '+rp(150000)+'. Hanya bisa sekali.');}},
@@ -722,6 +768,9 @@ function tickBills(news){
     b.late++;
     if(b.late===1){b.amt=Math.round(b.amt*1.1/1000)*1000;news.push(b.n+' menunggak, kena denda 10%.');}
     if(b.k==='pinjol'){b.amt=Math.round(b.amt*1.06/1000)*1000;S.conf=Math.max(0,S.conf-1);S.energy=Math.min(S.energy,80);if(!teror){teror=true;news.push('Debt collector pinjol meneror lewat telepon dan menghubungi keluargamu.');}}
+    else if(b.k==='kartu'&&b.late>=5){S.cc=null;S.blacklist=true;b.paid=true;S.conf=Math.max(0,S.conf-1);S.sAdd=(S.sAdd||0)+8;news.push('Kartu kreditmu diblokir dan namamu masuk BI Checking. Kini kamu tidak bisa lagi mengajukan kredit.');}
+    else if(b.k==='mobil'&&b.late>=3&&S.car){S.car=false;b.paid=true;b.rec=0;S.sAdd=(S.sAdd||0)+8;news.push('Debt collector leasing menarik mobilmu! DP hangus.');}
+    else if(b.k==='rumah'&&b.late>=4&&S.house){S.house=false;b.paid=true;b.rec=0;S.sAdd=(S.sAdd||0)+12;news.push('Bank menyita rumahmu karena cicilan macet. DP hangus, kamu kembali ke kos.');}
     else if(b.k==='motor'&&b.late>=3&&S.motor){S.motor=false;S.leasing=true;news.push('Debt collector leasing menarik motormu!');}
     else if(b.k==='kos'&&b.late>3)go='Kamu diusir dari kos karena menunggak. Barangmu dikeluarkan ke jalan.';
     else if((b.k==='hamil'||b.k==='sekolah'||b.k==='sakit')&&b.late===1){S.energy=Math.min(S.energy,85);news.push('Kamu sulit tidur memikirkan '+b.n+'.');}
@@ -729,19 +778,26 @@ function tickBills(news){
   return go;
 }
 function nextDay(forced){
-  S.day++;S.min=450;S.energy=forced?55:100;S.money-=S.daily;S.at=0;
+  for(const b of S.bills.slice())if(b.paid&&b.rec&&!b.renewed){b.renewed=true;S.bills.push(Object.assign(mkBill(b.k,b.base,b.due+b.rec),{rec:b.rec,base:b.base}));}
+  const e0=S.energy;S.day++;S.min=450;let gain=S.hunger<40?100:S.hunger<70?60:S.hunger<85?30:10;if(S.sick>0)gain=Math.round(gain*.5);if(S.house)gain+=10;S.energy=Math.min(forced?55:100,S.energy+gain);S.hunger=Math.min(100,S.hunger+15);S.money-=S.daily;S.at=0;
   const news=[];
   for(const id in S.apps){
     const a=S.apps[id],job=JOBS.find(j=>j.id===id);
     if(a.st==='wait'&&S.day>=a.decide){
       if(a.pass){a.st='invite';a.invDay=S.day+rnd(2);a.invMin=(job.tier===2?9:10)*60;S.unread++;news.push('Undangan interview '+job.name+': hari ke-'+a.invDay+' jam '+clk(a.invMin)+'.');}
-      else{a.st='rej';a.cool=S.day+3;S.unread++;news.push('Lamaran di '+job.name+' belum bisa dilanjutkan.');}
+      else{a.st='rej';a.cool=S.day+3;S.sAdd=(S.sAdd||0)+6;S.unread++;news.push('Lamaran di '+job.name+' belum bisa dilanjutkan.');}
     }
     if(a.st==='invite'&&S.day>a.invDay){a.st='rej';a.cool=S.day+3;news.push('Jadwal interview '+job.name+' terlewat.');}
     if(a.st==='rej'&&a.cool&&S.day>=a.cool)delete S.apps[id];
   }
   let go=tickBills(news);
   if(go||S.money<0){clearSave();hasSave=false;show({k:'lose'},go||('Uangmu habis di hari ke-'+S.day+'. Kamu terpaksa pulang kampung. Level 1 gagal.'),[{l:'Coba lagi',f:()=>{scene='title';}}]);return;}
+  if(S.hunger>=70)news.push('Kamu bangun dengan perut lapar dan badan lemas, tidurmu tidak memulihkan tenaga.');
+  const od=S.bills.filter(b=>!b.paid&&b.late>0).length;
+  S.stress=Math.min(100,Math.round((S.stress||0)*(S.house?.6:.7)+od*8+(S.hunger>=70?5:0)+(S.sick>0?5:0)+(S.sAdd||0)));S.sAdd=0;
+  if(S.stress>=60)news.push('Pikiranmu penuh, semua terasa berat dan cepat melelahkan.');
+  if(S.sick>0){S.sick--;if(S.sick<=0){S.sickK=null;news.push('Badanmu sudah pulih dari sakit.');}else news.push('Kamu masih '+S.sickK+'. Sisa sekitar '+S.sick+' hari, energi pulih lebih lambat.');}
+  else if((e0<=10&&Math.random()<.6)||(e0<=25&&Math.random()<.2+S.stress/300)){S.sick=3+rnd(3);S.sickK=['flu','demam','batuk-batuk'][rnd(3)];news.push('Karena terlalu lelah, kamu jatuh sakit: '+S.sickK+'. Beli obat di minimarket atau istirahat.');}
   const msg='Hari ke-'+S.day+'. Biaya hidup hari ini '+rp(S.daily)+'.'+(news.length?'\n'+news.join(' '):'');
   const cb=pickCollector();
   if(cb)collectScene(cb,msg);else homeMenu(msg);
@@ -769,7 +825,7 @@ function applyJob(i){
   if(a)return show({k:'home'},'Kamu sudah punya lamaran di sini. Status: '+stText(j)+'.',[{l:'Kembali',f:jobList}]);
   const total=S.cv.score+(S.edu===2?2:1)+rnd(2);
   S.apps[j.id]={st:'wait',decide:S.day+1+rnd(2),pass:total>=j.thr};
-  S.energy=Math.max(0,S.energy-3);if(advance(15))return;
+  drain(3);if(advance(15))return;
   show({k:'home'},'Lamaran ke '+j.name+' terkirim. Biasanya dibalas 1-2 hari lewat email.',[{l:'Kembali',f:jobList}]);
 }
 
@@ -802,6 +858,133 @@ function cvScene(){
   cbtn(100,176,70,18,'Batal',()=>homeMenu(),{});
 }
 
+
+// ===== Minimarket & warteg =====
+function cardBill(){return S.bills.find(b=>b.k==='kartu'&&!b.paid);}
+function cardAvail(){return S.cc?Math.max(0,S.cc.lim-(cardBill()?cardBill().amt:0)):0;}
+function cardCharge(n){let kb=cardBill();if(!kb){kb=mkBill('kartu',0,S.day+14);S.bills.push(kb);}kb.amt+=n;}
+function payX(n){if(S.money>=n){S.money-=n;return;}cardCharge(n);}
+function eatOpt(name,cost,hg,en,msg){
+  return {l:name+' (Rp '+(cost/1000)+'rb)'+(S.money<cost&&cardAvail()>=cost?' kartu':''),off:S.money<cost&&cardAvail()<cost,f:()=>{payX(cost);S.hunger=Math.max(0,S.hunger-hg);S.energy=Math.min(100,S.energy+en);if(advance(15))return;hereMenu(msg);}};
+}
+function martMenu(t){
+  const al=LOC[S.at].brand==='alfamart';
+  show({k:'mart',brand:LOC[S.at].brand},t||(al?'Alfamart. ':'Indomaret. ')+'Kasir menyapa: "Selamat datang, silakan." Buka 24 jam.',[
+    eatOpt('Mi instan cup',7000,30,5,'Kamu menyeduh mi di pojok minimarket. Lumayan mengganjal.'),
+    eatOpt('Roti sobek',5000,20,3,'Roti sobek habis dalam beberapa gigitan.'),
+    eatOpt('Kopi energi',6000,5,15,'Kopi dingin membuat matamu lebih terjaga.'),
+    eatOpt('Air mineral',4000,3,0,'Haus hilang, tapi perut masih kosong.'),
+    {l:'Obat flu (Rp 12rb)',off:S.money<12000||!(S.sick>0),f:()=>{S.money-=12000;S.sick=Math.max(0,S.sick-2);if(S.sick<=0)S.sickK=null;S.stress=Math.max(0,S.stress-5);if(advance(10))return;hereMenu(S.sick>0?'Obat diminum. Gejalamu mulai mereda, tapi belum sembuh.':'Obat diminum. Badanmu terasa jauh lebih enak.');}},
+    {l:'Ke peta',f:()=>{scene='map';selDest=-1;}}]);
+}
+function wartegMenu(t){
+  if(!openCheck(S.at))return;
+  show({k:'warteg'},t||'Warteg Bu Tini. Ibu warteg tersenyum: "Mau lauk apa, Nak?" Perutmu '+(S.hunger>=60?'keroncongan.':S.hunger>=30?'agak kosong.':'masih penuh.'),[
+    eatOpt('Makan lengkap',15000,70,12,'Nasi, ayam, sayur, dan es teh. Kenyang dan tenaga kembali.'),
+    eatOpt('Nasi telur hemat',8000,45,6,'Nasi telur sambal. Murah dan cukup mengenyangkan.'),
+    {l:'Ngutang dulu (bayar besok)',off:S.bills.some(b=>!b.paid&&b.k==='warteg'),f:()=>{
+      if(Math.random()<.7){S.bills.push(mkBill('warteg',15000,S.day+2));S.hunger=Math.max(0,S.hunger-70);S.energy=Math.min(100,S.energy+12);if(advance(15))return;wartegMenu('Ibu warteg mengangguk: "Ya sudah, tapi besok-lusa dibayar ya." Kamu makan sampai kenyang, utang Rp 15rb.');}
+      else wartegMenu('Ibu warteg menggeleng halus: "Maaf, Nak, hari ini tidak bisa ngutang."');}},
+    {l:'Ke peta',f:()=>{scene='map';selDest=-1;}}]);
+}
+
+// ===== Kartu kredit =====
+function cardMenu(t){
+  const kb=cardBill();
+  const info=!S.cc?(S.blacklist?'Kamu masuk daftar hitam BI Checking. Bank mana pun menolak kartu kredit untukmu.':'Kamu belum punya kartu kredit. Ajukan di Bank & Dealer.'):'Kartu kredit. Limit '+rp(S.cc.lim)+', tersedia '+rp(cardAvail())+'.'+(kb?'\nTagihan berjalan '+rp(kb.amt)+', jatuh tempo hari ke-'+kb.due+'.':'\nBelum ada tagihan.');
+  const ops=[];
+  if(S.cc){
+    ops.push({l:'Tarik tunai Rp 1jt (biaya 5%)',off:cardAvail()<1050000,f:()=>{cardCharge(1050000);S.money+=1000000;cardMenu('Kamu menarik tunai Rp 1.000.000. Tagihan bertambah Rp 1.050.000.');}});
+    ops.push({l:'Tarik tunai Rp 2jt (biaya 5%)',off:cardAvail()<2100000,f:()=>{cardCharge(2100000);S.money+=2000000;cardMenu('Kamu menarik tunai Rp 2.000.000. Tagihan bertambah Rp 2.100.000.');}});
+    if(kb)ops.push({l:'Bayar tagihan kartu '+rp(kb.amt),off:S.money<kb.amt,f:()=>{S.money-=kb.amt;kb.paid=true;cardMenu('Tagihan kartu lunas. Limitmu pulih penuh.');}});
+  }
+  ops.push({l:'Kembali',f:()=>moreMenu()});
+  show({k:'home'},t||info,ops);
+}
+
+// ===== Ojol =====
+function ojolMenu(t){
+  const ok=S.min<22*60&&S.energy>=25;
+  const veh=S.car?'mobil':'motor';
+  const ops=[];
+  if(!S.ojol){
+    ops.push({l:'Daftar mitra ojol (Rp 150rb)',off:S.money<150000,f:()=>{
+      if(!S.sim||!S.stnk)return ojolMenu('Pendaftaran ditolak: SIM dan STNK harus lengkap dan hidup.');
+      if(S.record)return ojolMenu('Pendaftaran ditolak: SKCK-mu bermasalah.');
+      if(!S.motor&&!S.car)return ojolMenu('Kamu tidak punya kendaraan untuk didaftarkan.');
+      S.money-=150000;S.ojol=true;if(advance(90))return;
+      ojolMenu('Akun mitra aktif. Kamu membeli jaket, helm, dan box hijau. Siap narik.');}});
+  }else{
+    ops.push({l:'Narik 2 jam',off:!ok,f:()=>ojolRun(2)});
+    ops.push({l:'Narik 4 jam',off:!ok||S.energy<45,f:()=>ojolRun(4)});
+  }
+  ops.push({l:'Kembali',f:()=>gigMenu()});
+  show({k:'home'},t||(S.ojol?'Mitra ojol ('+S.ojolN+' trip). Kendaraan: '+veh+'. Jam sibuk (06-09.30 dan 16-19.30) order lebih ramai. Butuh energi 25+ dan sebelum jam 22:00.':'Jadi mitra ojol: butuh SIM dan STNK hidup, SKCK bersih, serta kendaraan.'),ops);
+}
+function ojolRun(h){
+  const car=!!S.car,fareBase=car?26000:11000,start=S.min,end=S.min+h*60;
+  let rush=0;for(let m=start;m<end;m+=30)if(isRush(m))rush++;
+  const rf=rush/(h*2);
+  const n=Math.max(1,Math.round(h*(1.2+1.1*rf)+rnd(2)));
+  let gross=0;for(let i=0;i<n;i++)gross+=Math.round(fareBase*(.7+Math.random()*.7)/1000)*1000;
+  const fuel=h*(car?22000:7000);
+  const fin=(g,fu,extra,msg)=>{
+    const net=g-fu+extra;S.money+=net;S.ojolN+=n;S.hustle++;drain(h*(car?6:9));S.sAdd=(S.sAdd||0)+(net<0?5:0);
+    if(advance(h*60))return;
+    gigMenu(msg+'\n'+n+' order, kotor '+rp(g)+', bensin '+rp(fu)+(extra?(extra>0?', bonus ':', rugi ')+rp(Math.abs(extra)):'')+'. Bersih '+rp(net)+'.');
+  };
+  const r=Math.random();
+  if(r<.18)return show({k:'home'},'Hujan deras turun saat kamu sedang narik. Aplikasi menampilkan bonus hujan.',[
+    {l:'Terobos hujan (+Rp 30rb, bisa sakit)',f:()=>{if(Math.random()<.3&&!(S.sick>0)){S.sick=3;S.sickK='flu';}fin(gross,fuel,30000,'Kamu menerobos hujan. Basah kuyup, bonus masuk.'+(S.sick>0?' Besoknya badanmu meriang.':''));}},
+    {l:'Berteduh dulu (order -30%)',f:()=>fin(Math.round(gross*.7),fuel,0,'Kamu berteduh di warung sambil menunggu hujan reda.')}]);
+  if(r<.34)return show({k:'home'},'Penumpang memberi bintang 5 dan menyelipkan tip, katanya kamu ramah. Kamu tersenyum lega.',[
+    {l:'Terima kasih, Bu',f:()=>fin(gross,fuel,20000+rnd(5)*10000,'Rezeki kecil di tengah jalan.')}]);
+  if(r<.5)return show({k:'home'},'Orderan fiktif. Alamat tujuan tidak ada, penumpang tidak menjawab, dan kamu sudah menempuh jarak jauh.',[
+    {l:'Batalkan, terima rugi',f:()=>fin(gross,fuel,-20000,'Kamu membatalkan order dan melapor ke aplikasi.')},
+    {l:'Cari sendiri alamatnya',f:()=>fin(gross,fuel,Math.random()<.4?25000:-35000,'Kamu muter-muter mencari alamat.')}]);
+  if(r<.64)return show({k:'home'},'Penumpang minta turun di tengah jalan sambil marah-marah dan menolak bayar setelah protes soal rute.',[
+    {l:'Minta baik-baik',f:()=>fin(gross,fuel,Math.random()<.5?0:-15000,'Kamu menahan emosi dan menyelesaikan dengan sopan.')},
+    {l:'Hajar penumpang!',f:()=>startFight({who:'dc',bg:'door',hp:7,windT:.8,onEnd:won=>{S.sAdd=(S.sAdd||0)+8;if(won){fin(gross,fuel,-10000,'Penumpang kabur ketakutan. Akunmu kena laporan.');}else{S.money=Math.max(0,S.money-100000);S.energy=Math.max(0,S.energy-15);fin(Math.round(gross*.6),fuel,0,'Kamu babak belur dan uang dompetmu hilang Rp 100rb.');}}})}]);
+  if(r<.7)return show({k:'tilang'},'Di tengah narik, kendaraanmu bersenggolan dengan angkot. Ada lecet dan perlu ongkos damai.',[
+    {l:'Damai, ganti Rp 100rb',f:()=>fin(gross,fuel,-100000,'Kamu mengganti ongkos lecet. Hari yang sial.')}]);
+  fin(gross,fuel,0,'Narik berjalan lancar tanpa kejadian besar.');
+}
+
+// ===== Dealer & KPR =====
+function bankOk(){
+  if(S.blacklist)return false;
+  if(S.record)return Math.random()<.15;
+  const p=Math.min(.92,.4+.15*S.conf+(S.connect?.1:0)+(S.life==='easy'?.25:0)+(S.cv&&S.cv.score>=12?.08:0));
+  return Math.random()<p;
+}
+function dealerMenu(t){
+  if(!openCheck(S.at))return;
+  const dpC=2500000,dpR=3000000;
+  show({k:'dealer'},t||'Bank & Dealer. Petugas menyapa ramah: "Mau kredit mobil, KPR rumah, atau kartu kredit, Kak?" Buka jam 9-18.',[
+    {l:'Kredit mobil bekas',off:S.car,f:()=>show({k:'dealer'},'Mobil bekas siap pakai.\nDP '+rp(dpC)+', cicilan '+rp(1500000)+' per 30 hari. Butuh SIM. Telat 3 hari mobil ditarik leasing.',[
+      {l:'Ajukan kredit (DP '+rp(dpC)+')',off:S.money<dpC,f:()=>{
+        if(!S.sim)return dealerMenu('"Maaf Kak, kredit mobil butuh SIM A/C." Kamu belum punya SIM.');
+        if(advance(40))return;
+        if(!bankOk())return dealerMenu('Leasing menolak pengajuanmu setelah survei. Skor kredit dan riwayatmu belum cukup meyakinkan.');
+        S.money-=dpC;S.car=true;S.bills.push(Object.assign(mkBill('mobil',1500000,S.day+30),{rec:30,base:1500000}));S.stress=Math.max(0,(S.stress||0)-5);
+        dealerMenu('Pengajuan disetujui! Kamu menandatangani kontrak dan membawa pulang mobil bekas. Perjalanan kini lebih nyaman dan hemat tenaga. Cicilan '+rp(1500000)+' per 30 hari.');}},
+      {l:'Batal',f:()=>dealerMenu()}])},
+    {l:'KPR rumah subsidi',off:S.house,f:()=>show({k:'dealer'},'Rumah subsidi tipe 27, tanah kecil.\nDP '+rp(dpR)+', cicilan '+rp(1300000)+' per 30 hari. Tidur lebih nyenyak dan stres lebih cepat reda. Telat 4 hari rumah disita bank.',[
+      {l:'Ajukan KPR (DP '+rp(dpR)+')',off:S.money<dpR,f:()=>{
+        if(advance(60))return;
+        if(!bankOk())return dealerMenu('Bank menolak KPR-mu. Penghasilan belum tetap dan riwayat keuanganmu dianggap berisiko.');
+        S.money-=dpR;S.house=true;S.bills.push(Object.assign(mkBill('rumah',1300000,S.day+30),{rec:30,base:1300000}));S.stress=Math.max(0,(S.stress||0)-10);
+        dealerMenu('KPR disetujui! Kamu menerima kunci rumah subsidi pertamamu. Kini kamu pulang ke rumah sendiri, bukan kos. Cicilan '+rp(1300000)+' per 30 hari.');}},
+      {l:'Batal',f:()=>dealerMenu()}])},
+    {l:'Ajukan kartu kredit',off:!!S.cc,f:()=>{
+      if(S.blacklist)return dealerMenu('Petugas bank menggeleng: "Maaf, di BI Checking namamu tercatat kolektibilitas buruk. Kartu kredit tidak bisa."');
+      if(advance(40))return;
+      const p=S.record?.1:Math.min(.85,.35+.15*S.conf+(S.connect?.1:0));
+      if(Math.random()>=p)return dealerMenu('Pengajuan kartu kredit ditolak. Penghasilanmu belum tetap.');
+      S.cc={lim:S.conf>=3?5000000:3000000};dealerMenu('Kartu kredit disetujui! Limit '+rp(S.cc.lim)+'. Pakai dengan bijak, bunga dan denda sangat besar kalau telat.');}},
+    {l:'Ke peta',f:()=>{scene='map';selDest=-1;}}]);
+}
+
 // ===== Fotokopi & Samsat =====
 function fcMenu(t){
   if(!openCheck(1))return;
@@ -821,7 +1004,7 @@ function samsatMenu(t){
   const ops=[];
   const st='SIM: '+(S.sim?'ada':'belum')+' | STNK: '+(S.stnk?'pajak hidup':'pajak mati')+' | Motor: '+(S.motor?'ada':'disita');
   if(!S.stnk)ops.push({l:'Bayar pajak STNK (Rp 150rb)',f:()=>{if(S.money<150000)return samsatMenu('Uangmu tidak cukup.');S.money-=150000;S.stnk=true;if(advance(60))return;samsatMenu('Antre sejam. Pajak STNK lunas, aman dari razia.');}});
-  if(!S.sim)ops.push({l:'Buat SIM C (Rp 120rb)',f:()=>{if(S.money<120000)return samsatMenu('Uangmu tidak cukup.');S.money-=120000;S.sim=true;S.energy=Math.max(0,S.energy-8);if(advance(120))return;samsatMenu('Antre, foto, ujian teori dan praktik. SIM C akhirnya jadi.');}});
+  if(!S.sim)ops.push({l:'Buat SIM C (Rp 120rb)',f:()=>{if(S.money<120000)return samsatMenu('Uangmu tidak cukup.');S.money-=120000;S.sim=true;drain(8);if(advance(120))return;samsatMenu('Antre, foto, ujian teori dan praktik. SIM C akhirnya jadi.');}});
   if(!S.motor&&!S.leasing)ops.push({l:'Tebus motor (Rp 100rb)',f:()=>{if(S.money<100000)return samsatMenu('Uangmu tidak cukup.');S.money-=100000;S.motor=true;if(advance(45))return;samsatMenu('Motor berhasil ditebus.');}});
   ops.push({l:'Ke peta',f:()=>{scene='map';selDest=-1;}});
   show({k:'samsat'},t||('Kantor Samsat. Antrean mengular.\n'+st),ops);
@@ -891,7 +1074,7 @@ function trySneak(j){
       {l:'Saya mau melamar, Pak/Bu',f:runStage},{l:'Mundur pelan-pelan',f:()=>jobMenu(j)}]);
   }
   if(advance(60))return;
-  S.energy=Math.max(0,S.energy-15);S.apps[job.id]={st:'ban'};S.evil++;
+  drain(15);S.sAdd=(S.sAdd||0)+8;S.apps[job.id]={st:'ban'};S.evil++;
   show({k:'gate',j:j},'Satpam menangkap lenganmu: "Mau ke mana, Mas?!" Kamu digiring ke pos, KTP difoto, dan namamu dicatat. Perusahaan ini kini menolak namamu. (-60 menit)',[{l:'Pergi dengan malu',f:()=>jobMenu(j)}]);
 }
 function lobbyIn(j){
@@ -973,8 +1156,10 @@ function endStage(){
   if(st.k==='user'){const d=iv.div||'admin';if((d==='admin'&&(sk.includes('excel')||sk.includes('ngetik')))||(d==='ops'&&sk.includes('komunikasi'))||(d==='mkt'&&(sk.includes('komunikasi')||sk.includes('desain'))))bonus+=1;}
   if(st.k==='dir'&&sk.includes('inggris'))bonus+=1;
   if(S.energy<15)bonus-=1;
+  if(S.hunger>=75)bonus-=1;
+  if(S.sick>0)bonus-=1;
   const thr=Math.ceil(st.n*(0.9+0.3*tier)),total=iv.score+bonus;
-  S.energy=Math.max(0,S.energy-8);
+  drain(8);
   const out=iv.react;
   if(advance(25))return;
   if(total>=thr){
@@ -995,12 +1180,12 @@ function offer(){
 }
 function win(){
   const job=iv.job;clearSave();hasSave=false;
-  show({k:'win'},'Kamu diterima sebagai '+job.pos+' di '+job.name+'!\nGaji '+rp(job.sal)+' | Hari ke-'+S.day+' | Sisa uang '+rp(S.money)+(openBills().length?' | Tagihan belum lunas: '+openBills().length:'')+'\n'+LIFE[S.life].n+' | '+karma()+'. Level 1 selesai.',[{l:'Lanjut: satu tahun kemudian',f:()=>yearEnd(job,false)},{l:'Main lagi',f:()=>{scene='title';}}]);
+  show({k:'win'},'Kamu diterima sebagai '+job.pos+' di '+job.name+'!\nGaji '+rp(job.sal)+' | Hari ke-'+S.day+' | Sisa uang '+rp(S.money)+(S.car?' | Mobil':'')+(S.house?' | Rumah KPR':'')+(openBills().length?' | Tagihan belum lunas: '+openBills().length:'')+'\n'+LIFE[S.life].n+' | '+karma()+'. Level 1 selesai.',[{l:'Lanjut: satu tahun kemudian',f:()=>yearEnd(job,false)},{l:'Main lagi',f:()=>{scene='title';}}]);
 }
 function yearEnd(job,biz){
   const k=S.evil+S.crime;
   let kind,title,art,txt;
-  const sum='Sisa uang '+rp(S.money)+' | Jalan hidup: '+karma()+' | Hari ke-'+S.day;
+  const sum='Sisa uang '+rp(S.money)+' | Jalan hidup: '+karma()+' | Hari ke-'+S.day+(S.car?' | Punya mobil':'')+(S.house?' | Rumah KPR':'');
   if(k>=4){
     kind='preman';title='JADI PREMAN';art={k:'preman'};
     txt=biz?'Usahamu belum sempat berdiri. Kebiasaan main tangan dan jalur gelap menarikmu kembali ke jalanan.':'Kamu sempat bekerja di '+job.name+', tapi kamu dipecat setelah berkelahi dengan rekan kerja.';
@@ -1018,6 +1203,8 @@ function yearEnd(job,biz){
     else{kind='biasa';title='KARYAWAN BIASA';art={k:'win',title:'KARYAWAN BIASA'};
       txt='Setahun kemudian kamu masih bekerja di '+job.name+'. Gaji naik sedikit, hidup stabil, tapi belum ada promosi. Cukup untuk membayar tagihan dan menabung pelan-pelan.';}
   }
+  if(S.house)txt+=' Cicilan rumah berjalan dan kamu punya tempat pulang sendiri.';
+  if(S.car&&S.life!=='easy')txt+=' Mobil kreditanmu jadi tanda kerja kerasmu.';
   show({k:'night'},'Beberapa bulan berlalu... Satu tahun setelah hari pertamamu mencari kerja.',[{l:'Lanjut',f:()=>show(art,title+'\n'+txt+'\n'+sum,[{l:'Main lagi',f:()=>{scene='title';}}])}]);
 }
 JOBS.forEach(j=>{j.stages=STAGES[j.tier];});
