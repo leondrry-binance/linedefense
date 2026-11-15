@@ -1,0 +1,736 @@
+<!doctype html>
+<html lang="id"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Job Seeking</title>
+<style>
+html,body{margin:0;height:100%;background:#000;overflow:hidden}
+body{display:flex;align-items:center;justify-content:center}
+canvas{image-rendering:pixelated;image-rendering:crisp-edges;touch-action:manipulation;background:#000;display:block}
+</style></head><body>
+<canvas id="c" width="640" height="400"></canvas>
+<script>
+'use strict';
+// ===== Layar 320x200, palet 16 warna ala EGA, diperbesar tanpa blur =====
+const W=320,H=200,cv=document.getElementById('c'),g=cv.getContext('2d');
+g.setTransform(2,0,0,2,0,0);g.imageSmoothingEnabled=false;
+function fit(){const s=Math.min(innerWidth/640,innerHeight/400);const k=s>=1?Math.floor(s*2)/2:s;cv.style.width=(640*k)+'px';cv.style.height=(400*k)+'px';}
+addEventListener('resize',fit);fit();
+const P=['#000000','#1b2a8a','#2f6fd8','#7fb3ff','#8a4b1c','#d89a4a','#f3d9a0','#ffffff','#b02a2a','#e86a3a','#3c8a3c','#a8d870','#555555','#aaaaaa','#7a3fa0','#2a1a10'];
+const hexrgb=h=>[parseInt(h.substr(1,2),16),parseInt(h.substr(3,2),16),parseInt(h.substr(5,2),16)];
+function R(x,y,w,h,c){g.fillStyle=P[c];g.fillRect(Math.round(x),Math.round(y),Math.round(w),Math.round(h));}
+function box(x,y,w,h,fill){R(x,y,w,h,15);R(x+1,y+1,w-2,h-2,9);R(x+2,y+2,w-4,h-4,15);R(x+3,y+3,w-6,h-6,fill===undefined?6:fill);}
+
+// ===== Teks piksel: font bitmap asli (6x10 dan 5x8, domain publik X11 fixed), tanpa anti-alias =====
+const FD={"b": {"w": 6, "h": 10, "d": "0000000000000000000000040404040400040000000a0a0a000000000000000a0a1f0a1f0a0a000000040e140e050e0400000009150a040a15120000000814140815120d00000006040800000000000000020408080804020000000804020202040800000000110a1f0a11000000000004041f040400000000000000000006040800000000001f0000000000000000000000040e04000001010204081010000000040a1111110a04000000040c140404041f0000000e11010608101f0000001f01020601110e00000002060a121f02020000001f10161901110e0000000608101619110e0000001f0102020408080000000e11110e11110e0000000e11130d01020c00000000040e0400040e04000000040e040006040800000102040804020100000000001f001f0000000000100804020408100000000e1102040400040000000e11131516100e000000040a11111f11110000001e09090e09091e0000000e11101010110e0000001e09090909091e0000001f10101e10101f0000001f10101e1010100000000e11101013110e0000001111111f1111110000000e04040404040e0000000701010101110e000000111214181412110000001010101010101f00000011111b15111111000000111119151311110000000e11111111110e0000001e11111e1010100000000e11111111150e0100001e11111e1412110000000e11100e01110e0000001f0404040404040000001111111111110e0000001111110a0a0a0400000011111115151b1100000011110a040a111100000011110a040404040000001f01020408101f0000000e08080808080e000000101008040201010000000e02020202020e000000040a1100000000000000000000000000001f00000c04020000000000000000000e010f110f0000001010161911191600000000000e1110110e00000001010d1311130d00000000000e111f100e0000000609081e08080800000000000d120c100e110e001010161911111100000004000c0404040e00000002000602020212120c00101011121c12110000000c04040404040e00000000001a151515110000000000161911111100000000000e1111110e0000000000161919161010100000000d13130d010101000000161910101000000000000e100e011e00000008081e080809060000000000111111130d000000000011110a0a040000000000111115150a0000000000110a040a1100000000001111130d01110e0000001f0204081f0000000304020c0204030000000404040404040400000018040806080418000000091512000000000000"}, "s": {"w": 5, "h": 8, "d": "00000000000000000004040404000400000a0a0a000000000a0a1f0a1f0a0a00040e140e050e040000080a040a0200000814140814140a000004040400000000000408080808040000080404040408000000120c1e0c1200000004041f0404000000000000060408000000001e0000000000000000040e04000202040810100000040a0a0a0a040000040c0404040e00000c12020c101e00001e040c02120c0000040c141e040400001e101c02120c00000c101c12120c00001e020404080800000c120c12120c00000c12120e020c0000000c0c000c0c00000006060006040800020408080402000000001e001e0000000804020204080000040a02040004000609131515120806000c12121e121200001c121c12121c00000c121010120c00001c121212121c00001e101c10101e00001e101c10101000000c121016120c000012121e12121200000e040404040e00000e04040414080000121418141412000010101010101e0000121e1e1212120000121a1e16161200000c121212120c00001c12121c101000000c12121a160c02001c12121c121200000c120804120c00000e0404040404000012121212120c0000121212120c0c00001212121e1e12000012120c0c1212000011110a04040400001e020408101e00000e080808080e000010100804020200000e020202020e0000040a0000000000000000000000001e00080400000000000000000e12120e000010101c12121c0000000006080806000002020e12120e000000000c16180c0000040a081c0808000000000c120e020c0010101c121212000004000c04040e000002000202020a04001010121c121200000c040404040e000000001a151515000000001c121212000000000c12120c000000001c121c10100000000e120e0202000000141a101000000000060c020c000008081c080a04000000001212120e000000000a0a0a04000000001115150a00000000120c0c120000000012120e120c0000001e04081e00060804180408060000040404040404001804080608041800000a140000000000"}};
+const FONTS={};
+for(const k in FD){const f=FD[k];FONTS[k]={w:f.w,h:f.h,g:[]};
+  for(let i=0;i<95;i++){const r=[];for(let j=0;j<f.h;j++)r.push(parseInt(f.d.substr((i*f.h+j)*2,2),16));FONTS[k].g.push(r);}}
+let tcache={},tcount=0;
+function glyph(s,col,fk){
+  const k=fk+col+'|'+s;if(tcache[k])return tcache[k];
+  if(tcount>1500){tcache={};tcount=0;}
+  const F=FONTS[fk],w=Math.max(1,s.length*F.w),o=document.createElement('canvas');o.width=w;o.height=F.h;
+  const og=o.getContext('2d');og.fillStyle=col;
+  for(let i=0;i<s.length;i++){let c=s.charCodeAt(i)-32;if(c<0||c>94)c=31;const rows=F.g[c];
+    for(let y=0;y<F.h;y++){const b=rows[y];if(!b)continue;for(let x=0;x<F.w;x++)if(b&(1<<(F.w-1-x)))og.fillRect(i*F.w+x,y,1,1);}}
+  tcount++;return tcache[k]={c:o,w:w,h:F.h};
+}
+function T(s,x,y,col,al,sc,fk){
+  s=String(s);if(col===undefined)col=7;sc=sc||1;fk=fk||'b';const o=glyph(s,P[col],fk);const w=o.w*sc;
+  if(al===1)x-=w>>1;else if(al===2)x-=w;
+  g.drawImage(o.c,Math.round(x),Math.round(y),w,o.h*sc);return w;
+}
+function Ts(s,x,y,col,al){return T(s,x,y,col,al,1,'s');}
+function tw(s,fk){return String(s).length*FONTS[fk||'b'].w;}
+function wrap(s,maxw,fk){const out=[];let line='';for(const w of s.split(' ')){const t=line?line+' '+w:w;if(tw(t,fk)>maxw&&line){out.push(line);line=w;}else line=t;}if(line)out.push(line);return out;}
+
+
+// ===== Util =====
+const SAVEKEY='crtive_job_save_v1';
+const rnd=n=>Math.floor(Math.random()*n),pick=a=>a[rnd(a.length)];
+function shuf(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=rnd(i+1);[a[i],a[j]]=[a[j],a[i]];}return a;}
+function rp(n){n=Math.round(n);if(n>=1e6)return 'Rp '+(n/1e6).toFixed(1).replace('.0','').replace('.',',')+'jt';if(n>=1000)return 'Rp '+(Math.round(n/100)/10).toString().replace('.',',')+'rb';return 'Rp '+n;}
+function clk(m){m=Math.floor(m);const h=Math.floor(m/60)%24,mm=m%60;return (h<10?'0':'')+h+':'+(mm<10?'0':'')+mm;}
+const L=(x,y,w,h,c)=>R(x,12+y,w,h,c);
+
+// ===== Data =====
+const LOC=[
+ {n:'Rumah Kos',x:28,y:118,k:'home'},
+ {n:'Fotokopi Cepat',x:78,y:72,k:'fc'},
+ {n:'Kantor Samsat',x:122,y:122,k:'samsat'},
+ {n:'Toko Maju Jaya',x:58,y:34,k:'job',j:0},
+ {n:'Kopi Senja',x:150,y:50,k:'job',j:1},
+ {n:'PT Sinar Mandiri',x:212,y:108,k:'job',j:2},
+ {n:'CV Karya Bersama',x:198,y:34,k:'job',j:3},
+ {n:'Nusantara Global',x:274,y:70,k:'job',j:4}
+];
+const JOBS=[
+ {id:'toko',name:'Toko Maju Jaya',short:'TOKO MAJU JAYA',pos:'Staf Admin Toko',sal:2800000,tier:0,sets:1,edu:0,loc:3,thr:4},
+ {id:'kopi',name:'Kopi Senja',short:'KOPI SENJA',pos:'Kasir & Admin Kafe',sal:2600000,tier:0,sets:1,edu:0,loc:4,thr:4},
+ {id:'sinar',name:'PT Sinar Mandiri',short:'PT SINAR MANDIRI',pos:'Admin Operasional',sal:4500000,tier:1,sets:2,edu:1,loc:5,thr:8},
+ {id:'karya',name:'CV Karya Bersama',short:'CV KARYA BERSAMA',pos:'Staf Administrasi',sal:4200000,tier:1,sets:2,edu:1,loc:6,thr:8},
+ {id:'nus',name:'PT Nusantara Global Tbk',short:'NUSANTARA GLOBAL',pos:'Management Trainee',sal:7500000,tier:2,sets:3,edu:2,loc:7,thr:11}
+];
+const STAGES=[
+ [{k:'admin'},{k:'owner',n:3}],
+ [{k:'admin'},{k:'hrd',n:3},{k:'user',n:3}],
+ [{k:'admin'},{k:'psiko',n:3},{k:'hrd',n:3},{k:'user',n:3,div:true},{k:'dir',n:3}]
+];
+const TIERTXT=['Usaha kecil. Wawancara singkat, bisa antar lamaran langsung.','Perusahaan menengah. Harus ada undangan, 2 tahap wawancara.','Perusahaan besar. Seleksi panjang: psikotes, HRD, user, direksi.'];
+const Q=(q,a,b,c)=>({q:q,o:[[a,2],[b,1],[c,0]]});
+const BANK={
+ hrd:[
+  Q('Coba perkenalkan diri Anda.','Nama, pendidikan, pengalaman singkat, dan alasan tertarik pada posisi ini.','Nama saya Rian, lulusan baru, sedang mencari pekerjaan.','Saya orangnya santai, suka nongkrong dan main game.'),
+  Q('Apa kelebihan dan kekurangan Anda?','Teliti dan disiplin. Kekurangan: kadang gugup, saya atasi dengan persiapan.','Kelebihan saya teliti. Kekurangan saya kadang gugup.','Kelebihan saya banyak. Kekurangan saya tidak ada.'),
+  Q('Kenapa Anda melamar ke perusahaan kami?','Saya sudah pelajari bidang usaha Anda dan posisi ini cocok dengan kemampuan saya.','Karena perusahaan ini cukup terkenal.','Karena saya butuh uang secepatnya.'),
+  Q('Apa rencana Anda lima tahun ke depan?','Berkembang dan memberi kontribusi nyata di perusahaan ini.','Belum terpikir, lihat nanti saja.','Saya mau buka usaha sendiri, ini cuma sementara.'),
+  Q('Bersediakah Anda lembur atau masuk hari Sabtu?','Bersedia sesuai kebutuhan dan aturan perusahaan.','Bersedia kalau lemburnya dibayar.','Tidak, waktu pribadi saya lebih penting.'),
+  Q('Berapa gaji yang Anda harapkan?','Sesuai standar perusahaan untuk posisi ini, dan bisa kita bicarakan.','Terserah saja, yang penting dapat gaji.','Minimal 15 juta, kalau tidak ya tidak usah.'),
+  Q('Bagaimana jika Anda berbeda pendapat dengan atasan?','Saya sampaikan sopan beserta alasannya, lalu ikuti keputusan akhir.','Saya ikuti saja tanpa bicara apa-apa.','Saya diam saja tapi bekerja asal-asalan.'),
+  Q('Kapan Anda bisa mulai bekerja?','Bisa segera, paling lambat minggu depan.','Dua minggu lagi.','Bulan depan, saya mau liburan dulu.')
+ ],
+ owner:[
+  Q('Toko ini ramai di akhir pekan. Bisa masuk Sabtu dan Minggu?','Bisa, Pak. Saya siap, asal jadwal libur jelas.','Bisa, tapi kalau bisa jangan setiap minggu.','Wah, akhir pekan saya biasanya ada acara.'),
+  Q('Pernah pegang kasir atau mencatat stok barang?','Belum, tapi saya teliti dan cepat belajar. Boleh saya coba?','Belum pernah, Pak.','Pernah, sih, tapi lupa caranya.'),
+  Q('Rumahmu jauh dari sini? Kadang disuruh datang pagi.','Sekitar 20 menit naik motor. Siap datang pagi, Pak.','Lumayan jauh, tapi bisa diusahakan.','Jauh, dan saya suka telat bangun.'),
+  Q('Gaji awal tidak besar, ya. Bagaimana?','Tidak masalah, saya mau belajar dulu. Nanti dievaluasi ya, Pak.','Ya, kalau bisa naik cepat.','Kalau segitu saya pikir-pikir dulu.'),
+  Q('Kalau ada pembeli yang marah-marah, kamu bagaimana?','Dengarkan dulu, minta maaf, lalu cari solusi atau panggil Bapak.','Saya diam saja sampai dia selesai.','Saya balas, kan dia yang salah.')
+ ],
+ psiko:[
+  Q('Deret angka: 3, 6, 9, 12, ... Angka berikutnya?','15','14','16'),
+  Q('Rekan satu tim terlambat menyerahkan tugasnya. Anda...','Tanyakan kendalanya dan bantu mencari solusi bersama.','Menunggu saja sampai dia selesai.','Melapor ke atasan tanpa bicara dengannya.'),
+  Q('Tenggat laporan besok pagi, tapi masih banyak revisi.','Susun prioritas, kerjakan yang paling penting, lalu kabari atasan.','Kerjakan semampunya tanpa memberi kabar.','Tinggalkan dulu, besok urusan besok.'),
+  Q('Huruf berikutnya: A, C, E, G, ...','I','H','J')
+ ],
+ dir:[
+  Q('Bagaimana Anda bisa berkontribusi pada visi perusahaan kami?','Dengan bekerja teliti, terus belajar, dan membantu tim mencapai target.','Saya akan bekerja sebaik mungkin.','Saya belum tahu visi perusahaan ini.'),
+  Q('Jika ditempatkan di cabang luar kota, apakah bersedia?','Bersedia. Itu kesempatan belajar dan berkembang.','Bersedia kalau ada tunjangan tambahan.','Tidak, saya mau tetap di kota ini.'),
+  Q('Berapa lama Anda berkomitmen bekerja di sini?','Saya ingin berkarier jangka panjang dan tumbuh bersama perusahaan.','Mungkin dua sampai tiga tahun.','Sampai dapat tawaran yang lebih bagus.'),
+  Q('Apa pencapaian terbesar Anda sejauh ini?','Menyelesaikan magang dengan baik dan dipercaya memegang arsip kantor.','Lulus kuliah/sekolah.','Belum ada yang spesial.')
+ ],
+ admin:[
+  Q('Bagaimana Anda menjaga data dan arsip tetap rapi?','Penamaan file konsisten, folder per kategori, dan cadangan rutin.','Disimpan saja di desktop.','Tumpuk dulu, nanti dirapikan kalau sempat.'),
+  Q('Ada selisih angka di laporan yang akan dikirim. Anda...','Cek ulang sumber data, perbaiki, lalu kabari atasan jika ada revisi.','Kirim saja, mungkin tidak ada yang sadar.','Hapus baris yang bikin selisih.'),
+  Q('Excel mendadak error saat laporan harus selesai hari ini.','Pulihkan file otomatis, cari bantuan IT, dan beri kabar progres.','Panik dan menunggu sampai error hilang.','Pulang, besok saja dilanjut.'),
+  Q('Atasan memberi tiga tugas mendesak sekaligus.','Tanyakan prioritas, susun urutan kerja, lalu kerjakan satu per satu.','Kerjakan semuanya sekaligus.','Pilih yang paling gampang saja.')
+ ],
+ ops:[
+  Q('Kiriman barang terlambat dan pelanggan marah. Langkah Anda?','Minta maaf, cek status kiriman, beri kepastian waktu, lalu follow-up.','Minta pelanggan sabar menunggu.','Salahkan pihak ekspedisi.'),
+  Q('Stok di gudang tidak sesuai catatan sistem.','Hitung ulang, telusuri riwayat keluar-masuk, dan laporkan temuan.','Ubah angka sistem supaya cocok.','Abaikan, nanti juga ketemu sendiri.'),
+  Q('Anda diminta mengerjakan tugas di luar jobdesk.','Bersedia membantu sambil memastikan tugas utama tetap beres.','Menolak, itu bukan tugas saya.','Mengerjakan tapi dengan terpaksa.'),
+  Q('Dua divisi meminta bantuan Anda di jam yang sama.','Bicarakan prioritas dengan atasan lalu atur jadwal bantuan.','Bantu yang lebih dulu minta.','Bantu yang orangnya lebih galak.')
+ ],
+ mkt:[
+  Q('Calon pelanggan menolak penawaran Anda. Bagaimana?','Tanya alasannya, sesuaikan penawaran, dan jaga hubungan baik.','Mencoba menawarkan lagi dengan kata yang sama.','Menyerah dan beralih ke calon lain.'),
+  Q('Target penjualan bulan ini belum tercapai.','Evaluasi penyebab, ubah strategi, dan minta masukan tim.','Menunggu pembeli datang sendiri.','Menurunkan harga sembarangan.'),
+  Q('Bagaimana membuat promosi dengan anggaran kecil?','Manfaatkan media sosial, konten kreatif, dan testimoni pelanggan.','Menunggu anggaran ditambah.','Menyebar brosur sebanyak-banyaknya.'),
+  Q('Klien meminta diskon yang melebihi batas.','Jelaskan nilai produk, tawarkan paket alternatif, dan konsultasi atasan.','Setuju saja supaya cepat selesai.','Menolak mentah-mentah.')
+ ]
+};
+const CV_SLOTS=[
+ {k:'foto',n:'FOTO',x:10,y:22,w:36,h:42},
+ {k:'email',n:'EMAIL',x:50,y:38,w:98,h:26},
+ {k:'ring',n:'RINGKASAN',x:10,y:68,w:138,h:26},
+ {k:'exp',n:'PENGALAMAN',x:10,y:98,w:138,h:26},
+ {k:'s1',n:'KEAHLIAN 1',x:10,y:128,w:67,h:26},
+ {k:'s2',n:'KEAHLIAN 2',x:81,y:128,w:67,h:26}
+];
+const SK=[
+ {t:'Excel & Word dasar',v:2,tag:'excel'},{t:'Mengetik cepat',v:2,tag:'ngetik'},{t:'Komunikasi baik',v:2,tag:'komunikasi'},
+ {t:'Desain Canva',v:2,tag:'desain'},{t:'Bahasa Inggris pasif',v:1,tag:'inggris'},{t:'Jago main game',v:0,tag:'game'}
+];
+const CV_CHIPS={
+ foto:[{t:'Foto formal: kemeja, latar polos',v:2,req:1,id:'f'},{t:'Foto 3x4 pakai kaos biasa',v:1,id:'k'},{t:'Selfie pakai filter kucing',v:0,id:'s'}],
+ email:[{t:'rian.pratama@gmail.com',v:2},{t:'rian_ganteng88@gmail.com',v:1},{t:'cutiepie_alay@yahoo.com',v:0}],
+ ring:[{t:'Lulusan baru yang teliti, cepat belajar, siap ditempatkan.',v:2},{t:'Pekerja keras, jujur, dan berdedikasi tinggi.',v:1},{t:'Cari kerja apa saja asal gajinya besar.',v:0}],
+ exp:[{t:'Magang 3 bulan: arsip, surat, input data.',v:2},{t:'Aktif di organisasi sekolah/kampus.',v:1},{t:'Belum ada pengalaman.',v:0}],
+ s1:SK,s2:SK
+};
+
+// ===== State =====
+let S=null,scene='title',cur=null,hits=[],M={x:-1,y:-1},tNow=0,trip=null,iv=null,selDest=-1,cvSel='foto',cvDraft={},hasSave=false;
+function save(){try{localStorage.setItem(SAVEKEY,JSON.stringify(S));}catch(e){}}
+function load(){try{const j=localStorage.getItem(SAVEKEY);if(j){const o=JSON.parse(j);if(o&&o.apps&&o.money!==undefined)return o;}}catch(e){}return null;}
+function clearSave(){try{localStorage.removeItem(SAVEKEY);}catch(e){}}
+function newGame(bg){
+  S={bg:bg,edu:bg==='s1'?2:1,day:1,min:450,money:bg==='s1'?500000:700000,energy:100,at:0,cv:null,hasFoto:false,sets:0,
+     sim:bg==='smk',stnk:bg==='s1',motor:true,conf:0,apps:{},unread:0};
+  homeMenu('Hari pertama mencari kerja. '+(bg==='s1'?'Kamu lulusan S1, tapi belum punya SIM.':'Kamu lulusan SMK, tapi pajak STNK motor mati.')+' Mulai dari CV dulu.');
+}
+function show(art,text,opts,o){cur={art:art,text:text,opts:opts,o:o||{}};scene='say';}
+function advance(m){S.min+=m;if(S.min>=1440){passOut();return true;}return false;}
+function passOut(){show({k:'night'},'Hari sudah larut. Kamu kelelahan dan ketiduran. Besok pagi kamu terbangun di kamar kos.',[{l:'Bangun',f:()=>nextDay(true)}]);}
+function cvScore(sl){let s=0,seen={};for(const c of CV_SLOTS){const i=sl[c.k];if(i===undefined)continue;const ch=CV_CHIPS[c.k][i];let v=ch.v;if(c.k==='s1'||c.k==='s2'){if(seen[ch.tag])v=0;seen[ch.tag]=1;}s+=v;}return s;}
+function cvSkills(sl){return ['s1','s2'].map(k=>sl[k]===undefined?null:SK[sl[k]].tag).filter(Boolean);}
+
+// ===== Sprite dan gambar =====
+function person(x,y,o,s){s=s||1;o=o||{};const sk=o.skin===undefined?5:o.skin,hr=o.hair===undefined?15:o.hair,sh=o.shirt===undefined?2:o.shirt,pn=o.pants===undefined?1:o.pants;y=12+y;
+  const r=(a,b,c,d,e)=>R(x+a*s,y+b*s,c*s,d*s,e);
+  if(o.long)r(0,1,8,10,hr);
+  r(1,0,6,3,hr);r(1,2,6,5,sk);
+  if(o.back)r(1,0,6,6,hr);else{r(2,4,1,1,0);r(5,4,1,1,0);r(3,6,2,1,8);}
+  if(o.cap!==undefined){r(0,0,8,2,o.cap);r(0,2,9,1,o.cap);}
+  r(0,7,8,6,sh);r(-1,7,1,5,sh);r(8,7,1,5,sh);r(-1,12,1,1,sk);r(8,12,1,1,sk);
+  if(o.tie!==undefined)r(3,7,2,5,o.tie);
+  if(o.sit){r(0,13,8,3,pn);}else{r(1,13,3,5,pn);r(4,13,3,5,pn);r(1,17,3,1,0);r(4,17,3,1,0);}
+}
+function moto(x,y,col,rider){
+  L(x,y+7,5,5,0);L(x+14,y+7,5,5,0);L(x+1,y+8,3,3,13);L(x+15,y+8,3,3,13);
+  L(x+4,y+4,11,4,col);L(x+3,y+2,6,2,15);L(x+13,y+1,1,4,12);L(x+12,y+1,4,1,12);L(x+17,y+5,2,2,6);
+  if(rider!==undefined)person(x+3,y-13,{shirt:rider,pants:1,cap:rider===2?0:undefined},1);
+}
+function car(x,y,col){
+  L(x,y+4,22,6,col);L(x+4,y,13,5,col);L(x+6,y+1,4,3,3);L(x+11,y+1,4,3,3);
+  L(x+2,y+8,4,3,0);L(x+15,y+8,4,3,0);L(x+20,y+5,2,2,6);
+}
+function sky(h,c){L(0,0,320,h,c===undefined?3:c);}
+// ----- orang pertama: tampak dari pinggang ke atas -----
+function bust(cx,top,o,s){
+  o=o||{};s=s||1;const sk=o.skin===undefined?5:o.skin,hr=o.hair===undefined?15:o.hair,sh=o.shirt===undefined?2:o.shirt,y0=12+top;
+  const r=(a,b,c,d,e)=>R(cx+a*s,y0+b*s,c*s,d*s,e);
+  r(-14,18,28,34,sh);r(-17,21,4,31,sh);r(13,21,4,31,sh);r(-16,19,3,3,sh);r(13,19,3,3,sh);
+  if(o.long)r(-8,2,16,24,hr);
+  r(-2,15,4,4,sk);
+  r(-5,3,10,12,sk);r(-6,0,12,4,hr);r(-6,2,2,6,hr);r(4,2,2,6,hr);
+  r(-3,7,2,1,hr);r(1,7,2,1,hr);r(-3,8,2,1,0);r(1,8,2,1,0);
+  if(o.glasses){r(-4,7,4,3,0);r(0,7,4,3,0);r(-3,8,2,1,sk);r(1,8,2,1,sk);}
+  r(0,9,1,3,sk===6?5:4);
+  if(o.talk&&((tNow*6)|0)%2)r(-1,12,3,2,8);else r(-2,12,4,1,8);
+  if(o.cap!==undefined){r(-7,-2,14,4,o.cap);r(-8,2,16,1,o.cap);r(-1,-1,2,2,6);}
+  if(o.tie!==undefined){r(-3,18,6,3,7);r(-1,19,2,13,o.tie);}else r(-3,18,6,2,7);
+  if(o.badge)r(6,24,5,2,7);
+  if(o.hijab){r(-7,0,14,5,o.hijab);r(-7,2,3,14,o.hijab);r(4,2,3,14,o.hijab);r(-8,17,16,4,o.hijab);}
+}
+function clipRect(x,y,w,h,fn){g.save();g.beginPath();g.rect(x,12+y,w,h);g.clip();fn();g.restore();}
+function roadView(spd){
+  sky(38,3);L(0,26,320,12,13);
+  for(let i=0,x=-6;x<326;i++){const w=22+((i*17)%18),h=8+((i*29)%14);L(x,38-h,w,h,i%2?12:13);for(let wy=38-h+3;wy<35;wy+=5)for(let wx=x+3;wx<x+w-3;wx+=6)L(wx,wy,2,2,3);x+=w+2;}
+  L(0,38,320,62,13);L(0,38,320,3,12);
+  for(let y=39;y<100;y++){const d=y-38,w=24+d*5;L(Math.round(160-w/2),y,Math.round(w),1,12);L(Math.round(160-w/2)-2,y,2,1,(y%6<3)?7:8);L(Math.round(160+w/2),y,2,1,(y%6<3)?7:8);}
+  for(let y=39;y<100;y++){const d=(y-38)/62,z=1/(d+.05);const ph=(((z*1.3+tNow*(spd===undefined?5:spd))%2)+2)%2;if(ph<1){const w=Math.max(1,Math.round(1+d*4));L(160-(w>>1),y,w,1,7);}}
+}
+function rearCar(d,off,col){
+  const yb=40+d*58,k=.25+d*1.3,w=22*k,h=11*k,x=160+off*(24+(yb-38)*5)/4;
+  L(x-w/2,yb-h,w,h,col);L(x-w*.35,yb-h*1.45,w*.7,h*.5,col);L(x-w*.28,yb-h*1.38,w*.56,h*.35,3);
+  L(x-w/2,yb-h*.65,w*.2,Math.max(1,h*.2),8);L(x+w*.3,yb-h*.65,w*.2,Math.max(1,h*.2),8);
+  L(x-w/2,yb-h*.15,w*.18,Math.max(1,h*.2),0);L(x+w*.32,yb-h*.15,w*.18,Math.max(1,h*.2),0);
+}
+function handlebar(){
+  L(0,92,320,8,15);L(28,84,264,4,12);L(18,80,18,10,0);L(284,80,18,10,0);
+  L(34,66,26,13,13);L(36,68,22,9,3);L(260,66,26,13,13);L(262,68,22,9,3);L(46,79,2,6,12);L(272,79,2,6,12);
+  L(140,78,40,18,0);L(142,80,36,14,15);L(159,84,2,8,8);L(146,92,28,1,6);
+}
+function artTrip(p){
+  roadView(p.mode==='motor'?7:4);
+  if(p.mode==='motor'){rearCar(.3,-.5,13);rearCar(.5,.55,2);handlebar();}
+  else{L(0,0,320,8,10);L(0,0,10,100,10);L(310,0,10,100,10);L(0,70,320,4,12);L(60,60,30,40,15);L(62,56,26,16,5);L(60,72,30,28,6);L(220,62,30,38,15);L(222,58,26,16,4);L(220,74,30,26,8);L(0,96,320,4,4);}
+}
+function artMacet(){
+  roadView(0);rearCar(.12,-.4,8);rearCar(.12,.5,2);rearCar(.3,-.6,10);rearCar(.3,.1,7);rearCar(.3,.7,14);rearCar(.55,-.45,9);rearCar(.55,.5,13);rearCar(.8,-.2,2);
+  g.globalAlpha=.25;L(0,0,320,100,12);g.globalAlpha=1;
+  handlebar();
+  if(((tNow*3)|0)%2)Ts('TIIIN!',70,12+22,8,1);else Ts('PIIP! PIIP!',250,12+26,8,1);
+}
+function artTilang(){
+  roadView(0);L(18,84,6,10,9);L(24,87,4,7,7);L(290,84,6,10,9);L(296,87,4,7,7);
+  L(240,10,60,16,2);Ts('RAZIA',270,12+14,7,1);L(268,26,3,22,12);
+  bust(160,16,{shirt:4,hair:15,cap:4,badge:1,talk:1,tie:undefined},2);
+  handlebar();
+}
+function artHome(){
+  L(0,0,320,100,6);
+  L(14,6,92,64,15);L(17,9,86,58,3);L(58,9,4,58,7);L(17,36,86,4,7);L(8,4,12,70,8);L(100,4,12,70,8);
+  L(230,10,52,42,7);L(235,15,42,18,8);L(235,38,34,3,12);L(235,44,22,3,12);
+  L(150,8,22,22,15);L(153,11,16,16,7);L(160,13,2,8,0);L(160,19,6,2,0);
+  L(0,72,320,28,4);L(0,70,320,4,5);
+  L(96,28,128,46,12);L(100,32,120,38,3);L(106,38,50,5,15);L(106,48,86,3,12);L(106,55,70,3,12);L(106,62,40,5,8);L(196,38,18,26,7);L(198,40,14,12,13);
+  L(86,72,148,6,13);L(100,80,120,10,12);for(let i=0;i<12;i++)L(104+i*9,82,7,3,13);
+  L(246,60,16,18,7);L(248,62,12,3,4);L(262,64,5,8,7);
+  L(30,66,34,10,7);L(32,64,30,2,6);
+}
+function artFc(){
+  L(0,0,320,100,6);L(30,0,260,14,8);T('FOTOKOPI & PRINT',160,12+2,7,1);
+  L(10,24,90,3,4);L(10,46,90,3,4);L(14,12,14,12,7);L(30,15,12,9,3);L(46,13,14,11,6);L(14,34,12,12,7);L(30,36,14,10,3);
+  L(110,18,30,36,3);L(114,22,22,14,8);Ts('FOTO',125,12+42,15,1);
+  L(238,34,70,14,7);L(238,48,70,36,13);L(244,54,26,8,0);L(290,58,12,4,10);L(250,70,40,8,12);
+  bust(170,16,{shirt:9,hair:0,talk:1},1.7);
+  L(0,70,320,30,4);L(0,68,320,4,5);L(30,60,40,8,7);L(34,56,32,4,7);L(220,62,26,8,7);L(120,64,30,4,3);
+}
+function artSamsat(){
+  L(0,0,320,100,13);L(0,0,320,12,10);T('SAMSAT',160,12+1,7,1);
+  L(14,18,70,28,0);Ts('NOMOR',49,12+21,6,1);T('A-045',49,12+31,8,1);
+  L(100,16,208,60,12);L(106,22,196,48,3);
+  clipRect(106,22,196,48,()=>bust(204,26,{shirt:10,hair:0,long:1,badge:1,talk:1},1.4));
+  L(100,16,208,6,10);Ts('LOKET 2',204,12+19,6,1);
+  L(90,70,228,6,5);L(90,76,228,24,4);L(130,66,26,4,7);L(260,64,20,6,7);L(14,60,70,40,12);L(20,66,58,28,13);
+}
+function artRoad(){roadView(5);}
+function artBld(p){
+  const job=JOBS[p.j];sky(60);L(250,6,12,12,6);L(0,80,320,20,12);L(0,72,320,8,13);for(let x=-((tNow*0)%30);x<320;x+=30)L(x,90,16,2,7);
+  if(job.tier===0){
+    const a=job.id==='toko'?[8,7]:[4,6];
+    L(80,28,160,46,6);for(let i=0;i<10;i++)L(80+i*16,42,16,8,i%2?a[0]:a[1]);
+    L(150,54,20,20,4);L(96,54,40,14,3);L(190,54,40,14,3);L(90,28,140,12,15);T(job.short,160,12+30,6,1);
+    if(job.id==='kopi'){L(100,72,12,2,4);L(200,72,12,2,4);L(104,66,4,6,4);L(204,66,4,6,4);}
+  }else if(job.tier===1){
+    L(70,8,180,66,12);for(let y=14;y<60;y+=12)for(let x=82;x<240;x+=22){L(x,y,16,8,2);L(x+7,y,2,8,7);}
+    L(138,52,44,22,3);L(159,52,2,22,7);L(96,0,128,12,1);T(job.short,160,12+1,7,1);L(26,50,24,24,6);L(24,46,28,5,8);
+  }else{
+    L(14,34,48,40,13);L(262,28,44,46,12);for(let y=38;y<70;y+=8)for(let x=20;x<56;x+=12)L(x,y,6,4,3);
+    L(104,0,112,74,2);for(let y=4;y<44;y+=8)for(let x=110;x<212;x+=14){L(x,y,8,5,3);}
+    L(156,-0,8,0,7);L(98,46,124,12,1);T(job.short,160,12+47,7,1);L(138,58,44,16,3);L(159,58,2,16,7);
+    L(158,0,4,0,12);
+  }
+}
+function artGate(p){
+  artBld(p);
+  L(30,28,260,72,12);L(30,26,260,4,15);L(120,18,80,10,10);Ts('POS SATPAM',160,12+19,7,1);
+  L(70,40,180,50,13);
+  clipRect(70,40,180,50,()=>bust(160,42,{shirt:1,hair:15,cap:1,badge:1,talk:1},2));
+  L(60,36,200,4,15);L(60,86,200,6,5);L(60,92,200,8,4);L(110,82,26,5,7);
+}
+function artLobby(p){
+  const job=JOBS[p.j],t=job.tier;
+  L(0,0,320,66,t===2?3:6);L(0,66,320,34,t===2?7:13);
+  for(let x=0;x<320;x+=20)for(let y=66;y<100;y+=11)if((((x/20)|0)+(((y-66)/11)|0))%2===0)L(x,y,20,11,t===2?13:12);
+  L(14,8,100,16,1);T(job.short,64,12+11,7,1);
+  L(20,40,12,24,10);L(18,62,16,8,4);L(24,34,8,8,11);L(290,36,12,28,10);L(288,62,16,8,4);
+  bust(170,10,{long:1,hair:0,shirt:t===2?8:10,badge:1,talk:1},1.8);
+  L(70,66,200,34,4);L(66,64,208,4,6);L(120,72,60,10,7);Ts('RECEPTION',150,12+75,15,1);L(210,70,20,6,12);
+}
+function artRoom(p){
+  const w=p.who;
+  if(w==='psiko'){
+    L(0,0,320,62,7);L(0,40,320,22,4);
+    bust(160,-2,{shirt:2,hair:0,tie:8,talk:0,glasses:1},.9);L(120,24,80,3,12);
+    L(60,34,200,28,5);L(80,30,160,32,7);for(let i=0;i<5;i++){L(90,36+i*5,100,1,12);L(200,34+i*5,6,4,i%2?8:0);}
+    L(246,38,30,4,9);L(274,38,6,4,8);
+    return;
+  }
+  L(0,0,320,62,6);L(0,58,320,4,4);
+  L(20,6,56,40,10);L(24,10,48,32,11);L(244,8,50,36,3);L(267,8,3,36,7);L(244,24,50,3,7);
+  const o={hrd:{long:1,hair:0,shirt:8,badge:1},user:{hair:0,shirt:2,tie:8,glasses:1},dir:{hair:13,shirt:12,tie:8,skin:6,glasses:1},owner:{hair:0,shirt:9}}[w]||{};
+  o.talk=1;bust(160,-2,o,1.9);
+  L(60,44,200,18,4);L(56,42,208,3,5);L(110,38,40,6,7);L(118,36,24,3,7);L(196,38,12,5,12);L(10,48,20,14,13);
+}
+function artNight(){
+  L(0,0,320,100,1);for(let i=0;i<30;i++)L((i*53)%320,(i*37)%50,1,1,7);L(262,10,14,14,6);L(266,10,10,12,1);
+  L(0,70,320,30,15);
+  for(let i=0,x=-4;x<320;i++){const w=36+((i*13)%20),h=22+((i*17)%24);L(x,70-h,w,h,15);L(x,70-h,w,1,0);for(let wy=70-h+4;wy<66;wy+=8)for(let wx=x+4;wx<x+w-4;wx+=9)if(((wx+wy+i)%3)!==0)L(wx,wy,3,3,9);x+=w+2;}
+}
+function artWin(){
+  L(0,0,320,100,3);L(0,70,320,30,10);
+  for(let i=0;i<40;i++){const x=(i*47)%320,y=((i*31+tNow*30)%86)|0;L(x,y,2,2,[8,9,6,11,14,7][i%6]);}
+  bust(160,16,{long:1,hair:0,shirt:7,badge:1,talk:1},1.8);
+  L(110,70,100,30,7);L(116,74,88,2,12);L(116,80,70,2,12);L(116,86,76,2,12);L(180,88,24,8,8);
+  L(60,4,200,14,15);T('DITERIMA KERJA!',160,12+6,6,1);
+}
+function artLose(){
+  L(0,0,320,100,12);L(40,10,240,60,15);L(44,14,232,52,3);for(let i=0;i<60;i++){const x=44+(i*29)%232,y=14+((i*17+tNow*80)%52)|0;L(x,y,1,4,7);}
+  g.globalAlpha=.4;L(44,14,232,52,12);g.globalAlpha=1;L(0,78,320,22,15);
+}
+const ARTS={home:artHome,road:artRoad,trip:artTrip,macet:artMacet,tilang:artTilang,fc:artFc,samsat:artSamsat,bld:artBld,gate:artGate,lobby:artLobby,room:artRoom,night:artNight,win:artWin,lose:artLose};
+function drawArt(a,ah){
+  g.save();g.beginPath();g.rect(0,12,W,ah);g.clip();
+  (ARTS[a.k]||artHome)(a);
+  const h=S?Math.floor(S.min/60):12;
+  if((h<5||h>=18)&&a.k!=='night'&&a.k!=='win'&&a.k!=='lose'){g.globalAlpha=.38;R(0,12,W,ah,0);g.globalAlpha=1;}
+  g.restore();
+}
+
+// ===== UI =====
+function cbtn(x,y,w,h,label,fn,o){
+  o=o||{};const hov=M.x>=x&&M.x<x+w&&M.y>=y&&M.y<y+h&&!o.off;const sel=hov;
+  R(x,y,w,h,sel?0:o.off?13:15);R(x+1,y+1,w-2,h-2,sel?1:o.off?13:(o.dim?13:o.bg===undefined?7:o.bg));
+  const col=sel?7:o.off?12:15;label=String(label);
+  if(tw(label,'b')<=w-6)T(label,x+w/2,y+(h-10>>1),col,1);
+  else if(h>=17){const ls=wrap(label,w-8,'s');const th=ls.length*8;ls.forEach((l,i)=>T(l,x+w/2,y+((h-th)>>1)+i*8,col,1,1,'s'));}
+  else{let l=label;while(tw(l,'s')>w-6&&l.length>3)l=l.slice(0,-1);T(l,x+w/2,y+(h-8>>1),col,1,1,'s');}
+  hits.push({x:x,y:y,w:w,h:h,fn:fn,off:o.off});
+}
+function topbar(){
+  R(0,0,W,12,15);Ts('Hari '+S.day+'  '+clk(S.min),4,2,6);
+  Ts(LOC[S.at].n,84,2,13);
+  Ts(rp(S.money),196,2,11);
+  Ts('E',254,2,7);R(262,3,50,6,12);R(263,4,Math.max(0,Math.round(48*S.energy/100)),4,S.energy>30?10:8);
+}
+function drawSay(){
+  const c=cur,ah=c.o.ah||100;topbar();drawArt(c.art,ah);
+  const py=12+ah+2;box(0,py-2,W,H-py+2,6);
+  const lines=[];String(c.text).split('\n').forEach(s=>wrap(s,304,'b').forEach(l=>lines.push(l)));
+  lines.forEach((l,i)=>{if(py+3+i*10<H-2)T(l,8,py+3+i*10,15,0);});
+  const ops=c.opts,n=ops.length;
+  if(n<=3){
+    const bh=ah<=70?19:14,y0=py+3+lines.length*10+3;
+    ops.forEach((o,i)=>cbtn(8,Math.min(y0+i*(bh+2),H-3-bh),304,bh,o.l,()=>{if(!o.off)o.f();},{off:o.off,dim:o.dim}));
+  }else{
+    const rows=Math.ceil(n/2),y0=H-3-rows*13;
+    ops.forEach((o,i)=>cbtn(i%2?164:6,y0+((i/2)|0)*13,150,12,o.l,()=>{if(!o.off)o.f();},{off:o.off,dim:o.dim}));
+  }
+}
+function titleScene(){
+  R(0,0,W,H,1);for(let i=0;i<36;i++)R((i*53)%320,(i*37)%90,1,1,7);R(262,12,14,14,6);R(267,12,10,12,1);
+  for(let i=0,x=-4;x<320;i++){const w=32+((i*13)%22),h=34+((i*17)%34);R(x,100-h,w,h,i%2?12:15);for(let wy=100-h+5;wy<96;wy+=9)for(let wx=x+4;wx<x+w-4;wx+=9)if(((wx+wy+i)%3)!==0)R(wx,wy,3,4,9);x+=w+2;}
+  R(0,100,W,100,15);R(0,100,W,2,13);for(let x=-((tNow*30)%32);x<320;x+=32)R(Math.round(x),128,18,2,6);
+  box(30,10,260,52,6);T('JOB SEEKING',160,18,8,1,2);T('Level 1: Dari lamaran sampai diterima',160,46,15,1);
+  const mx=((tNow*40)%380)-30;
+  g.save();g.translate(0,0);
+  // motor kecil di jalan
+  const bx=Math.round(mx),by=108;R(bx,by+7,5,5,0);R(bx+14,by+7,5,5,0);R(bx+4,by+4,11,4,9);R(bx+13,by+1,1,4,12);R(bx+3,by+2,6,2,15);R(bx+6,by-13,8,6,5);R(bx+6,by-8,8,6,7);R(bx+7,by-14,6,3,15);
+  g.restore();
+  T('Pilih latar belakangmu:',160,142,7,1);
+  cbtn(40,154,112,16,'Lulusan SMK',()=>newGame('smk'),{});
+  cbtn(168,154,112,16,'Fresh Graduate S1',()=>newGame('s1'),{});
+  if(hasSave)cbtn(100,176,120,16,'Lanjutkan',()=>{const o=load();if(o){S=o;homeMenu('Selamat datang kembali. Lanjut cari kerja!');}},{});
+}
+function mapScene(){
+  topbar();R(0,12,W,138,10);
+  for(let i=0;i<40;i++)R((i*47)%320,16+(i*29)%130,2,2,11);
+  [56,96,136].forEach(y=>{R(0,y,W,5,12);for(let x=0;x<W;x+=14)R(x,y+2,7,1,13);});
+  [60,126,180,240].forEach(x=>{R(x,12,5,138,12);for(let y=12;y<150;y+=14)R(x+2,y,1,7,13);});
+  LOC.forEach((l,i)=>{
+    const sel=i===selDest,here=i===S.at;
+    if(sel)R(l.x-9,l.y-9,18,18,8);
+    R(l.x-7,l.y-7,14,14,15);
+    const k=l.k==='home'?[5,8]:l.k==='fc'?[3,2]:l.k==='samsat'?[6,10]:JOBS[l.j].tier===2?[2,1]:JOBS[l.j].tier===1?[13,12]:[9,7];
+    R(l.x-6,l.y-6,12,12,k[0]);R(l.x-6,l.y-6,12,4,k[1]);
+    if(here){R(l.x-3,l.y-16,6,5,7);R(l.x-1,l.y-11,2,3,7);}
+    const tw2=tw(l.n,'s');const lx=Math.max(2,Math.min(W-tw2-2,l.x-tw2/2|0));
+    R(lx-1,l.y+8,tw2+2,9,15);Ts(l.n,lx,l.y+9,here?6:7);
+    hits.push({x:l.x-10,y:l.y-10,w:20,h:20,fn:()=>{selDest=i;}});
+  });
+  box(0,150,W,50,6);
+  if(selDest<0||selDest===S.at){
+    T('Pilih tujuan di peta. Kamu di: '+LOC[S.at].n,8,154,15,0);
+    cbtn(8,176,100,16,'Kembali',()=>{selDest=-1;hereMenu();},{});
+  }else{
+    const b=baseMin(S.at,selDest),tm=b,ta=Math.round(b*1.5+10);
+    T('Ke: '+LOC[selDest].n,8,154,15,0);
+    Ts('Motor: ~'+tm+' mnt, Rp 5rb, bisa macet/razia',8,166,12);
+    Ts('Angkot: ~'+ta+' mnt, Rp 8rb, lebih aman',8,175,12);
+    cbtn(8,185,92,13,S.motor?'Naik motor':'Motor disita',()=>startTrip(selDest,'motor'),{off:!S.motor||S.money<5000});
+    cbtn(106,185,92,13,'Naik angkot',()=>startTrip(selDest,'angkot'),{off:S.money<8000});
+    cbtn(204,185,60,13,'Batal',()=>{selDest=-1;},{});
+  }
+}
+function drawTrip(){topbar();drawArt({k:'trip',t:Math.min(1.5,trip.t),mode:trip.mode},100);
+  box(0,114,W,86,6);T(trip.mode==='motor'?'Berangkat naik motor...':'Naik angkot, duduk berdesakan...',8,120,15,0);
+  T('Menuju '+LOC[trip.to].n,8,134,12,0);}
+
+// ===== Perjalanan =====
+function dist(a,b){return Math.hypot(LOC[a].x-LOC[b].x,LOC[a].y-LOC[b].y);}
+function baseMin(a,b){return 8+Math.round(dist(a,b)*0.2);}
+function isRush(m){const h=m/60;return (h>=6&&h<9.5)||(h>=16&&h<19.5);}
+function startTrip(to,mode){
+  S.money-=mode==='motor'?5000:8000;
+  trip={from:S.at,to:to,mode:mode,t:0,base:baseMin(S.at,to),extra:0,done:false};selDest=-1;scene='trip';
+}
+function resolveTrip(){
+  if(trip.mode==='motor'){
+    if(Math.random()<(isRush(S.min)?.65:.25)){
+      const ex=20+rnd(30);
+      show({k:'macet'},'Macet parah! Klakson di mana-mana. Kalau sabar, kira-kira telat '+ex+' menit.\nAtau lewat jalan tikus: lebih cepat, tapi bisa kena razia.',[
+        {l:'Sabar menunggu',f:()=>tripPolice(ex,false)},
+        {l:'Lewat jalan tikus',f:()=>tripPolice(Math.round(ex/2),Math.random()<.4)}]);
+      return;
+    }
+    tripPolice(0,Math.random()<.22);
+  }else tripPolice(rnd(12),false);
+}
+function tripPolice(ex,police){trip.extra+=ex;if(police)policeStop(finishTrip);else finishTrip();}
+function policeStop(next){
+  const miss=[];if(!S.sim)miss.push('SIM');if(!S.stnk)miss.push('STNK (pajak mati)');
+  if(!miss.length){
+    show({k:'tilang'},'Polisi menyetop dan memeriksa surat-surat. SIM dan STNK lengkap. "Silakan lanjut, Mas."\nKamu lega. (+10 menit)',[{l:'Lanjut jalan',f:()=>{trip.extra+=10;next();}}]);return;
+  }
+  const fine=(S.sim?0:150000)+(S.stnk?0:100000);
+  show({k:'tilang'},'"Permisi, Mas. Surat-suratnya mana?" Kamu tidak punya '+miss.join(' & ')+'.\nDenda tilang: '+rp(fine)+'.',[
+    {l:'Bayar denda '+rp(fine),f:()=>{if(S.money>=fine){S.money-=fine;trip.extra+=20;next();}else seized(next);}},
+    {l:'Aku tidak punya uang...',f:()=>seized(next)}]);
+}
+function seized(next){
+  S.motor=false;trip.mode='angkot';
+  show({k:'tilang'},'Uangmu tidak cukup. Motor ditahan polisi. Tebus di Samsat (Rp 100rb) kalau sudah punya uang. Kamu melanjutkan dengan angkot.',[{l:'Lanjut',f:()=>{trip.extra+=40;next();}}]);
+}
+function finishTrip(){
+  const dur=(trip.mode==='motor'?trip.base:Math.round(trip.base*1.5+10))+trip.extra;
+  S.energy=Math.max(0,S.energy-(trip.mode==='motor'?5:9));
+  if(advance(dur))return;
+  S.at=trip.to;arrived();
+}
+function hereMenu(t){const k=LOC[S.at].k;if(k==='home')homeMenu(t);else if(k==='fc')fcMenu(t);else if(k==='samsat')samsatMenu(t);else jobMenu(LOC[S.at].j,t);}
+function arrived(){hereMenu();}
+function openCheck(lo){
+  const h=S.min/60;const k=LOC[lo].k,r=k==='fc'?[7,21]:k==='samsat'?[8,15]:[8,17];
+  if(h>=r[0]&&h<r[1])return true;
+  show({k:k==='fc'?'fc':k==='samsat'?'samsat':'bld',j:LOC[lo].j},'Tempat ini tutup. Jam buka: '+r[0]+':00 - '+r[1]+':00.',[{l:'Ke peta',f:()=>{scene='map';}}]);return false;
+}
+
+// ===== Rumah =====
+function homeMenu(t){
+  save();
+  show({k:'home'},t||'Kamar kos kecilmu. Laptop menyala, kopi sachet sudah dingin. Waktunya cari kerja.',[
+    {l:S.cv?'Ubah CV':'Buat CV',f:cvOpen},
+    {l:'Cari lowongan',f:jobList},
+    {l:'Cek email'+(S.unread?' ('+S.unread+')':''),f:inbox},
+    {l:'Latihan interview',f:practice},
+    {l:'Tidur',f:sleep},
+    {l:'Keluar rumah',f:()=>{scene='map';selDest=-1;}}]);
+}
+function practice(){
+  if(S.energy<15)return homeMenu('Kamu terlalu capek untuk latihan.');
+  S.conf=Math.min(6,S.conf+1);S.energy-=15;if(advance(60))return;
+  homeMenu('Kamu latihan menjawab di depan cermin selama sejam. Percaya dirimu naik ('+S.conf+'/6). Jawaban jelas, sopan, dan jujur lebih disukai.');
+}
+function sleep(){
+  if(S.min<18*60&&S.energy>=40)return homeMenu('Belum ngantuk. Masih siang, sayang kalau dipakai tidur.');
+  show({k:'night'},'Zzz... Besok harus lebih semangat.',[{l:'Bangun pagi',f:()=>nextDay(false)}]);
+}
+function nextDay(forced){
+  S.day++;S.min=450;S.energy=forced?55:100;S.money-=30000;S.at=0;
+  const news=[];
+  for(const id in S.apps){
+    const a=S.apps[id],job=JOBS.find(j=>j.id===id);
+    if(a.st==='wait'&&S.day>=a.decide){
+      if(a.pass){a.st='invite';a.invDay=S.day+rnd(2);a.invMin=(job.tier===2?9:10)*60;S.unread++;news.push('Undangan interview '+job.name+': hari ke-'+a.invDay+' jam '+clk(a.invMin)+'.');}
+      else{a.st='rej';a.cool=S.day+3;S.unread++;news.push('Lamaran di '+job.name+' belum bisa dilanjutkan.');}
+    }
+    if(a.st==='invite'&&S.day>a.invDay){a.st='rej';a.cool=S.day+3;news.push('Jadwal interview '+job.name+' terlewat.');}
+    if(a.st==='rej'&&a.cool&&S.day>=a.cool)delete S.apps[id];
+  }
+  if(S.money<0){clearSave();hasSave=false;show({k:'lose'},'Uangmu habis di hari ke-'+S.day+'. Kamu terpaksa pulang kampung. Level 1 gagal.',[{l:'Coba lagi',f:()=>{scene='title';}}]);return;}
+  homeMenu('Hari ke-'+S.day+'. Makan hari ini '+rp(30000)+'.'+(news.length?'\n'+news.join(' '):''));
+}
+function inbox(){
+  S.unread=0;const ls=[];
+  for(const id in S.apps){const a=S.apps[id],job=JOBS.find(j=>j.id===id);
+    ls.push(job.name+': '+(a.st==='wait'?'menunggu balasan':a.st==='invite'?'UNDANGAN hari ke-'+a.invDay+', jam '+clk(a.invMin):'tidak lolos'));}
+  show({k:'home'},ls.length?'Kotak masuk:\n'+ls.join('\n'):'Belum ada lamaran yang dikirim.',[{l:'Kembali',f:()=>homeMenu()}]);
+}
+function jobList(){
+  const ops=JOBS.map((j,i)=>({l:j.name,f:()=>jobInfo(i)}));ops.push({l:'Kembali',f:()=>homeMenu()});
+  show({k:'home'},'Lowongan tersedia. Makin besar perusahaannya, makin panjang dan sulit seleksinya.',ops);
+}
+function stText(job){const a=S.apps[job.id];if(!a)return 'belum melamar';return a.st==='wait'?'menunggu balasan':a.st==='invite'?'diundang hari ke-'+a.invDay:'ditolak (coba lagi nanti)';}
+function jobInfo(i){
+  const j=JOBS[i];
+  show({k:'home'},j.name+' - '+j.pos+'\nGaji '+rp(j.sal)+' | Syarat: '+(j.edu===2?'S1':j.edu===1?'SMK/S1':'semua lulusan')+' | Berkas '+j.sets+' set\n'+TIERTXT[j.tier]+'\nStatus: '+stText(j),[
+    {l:'Kirim lamaran',f:()=>applyJob(i)},{l:'Kembali',f:jobList}]);
+}
+function applyJob(i){
+  const j=JOBS[i],a=S.apps[j.id];
+  if(!S.cv)return show({k:'home'},'Buat CV dulu sebelum melamar.',[{l:'Buat CV',f:cvOpen},{l:'Kembali',f:jobList}]);
+  if(S.edu<j.edu)return show({k:'home'},'Syarat pendidikan tidak terpenuhi. Lamaran langsung ditolak sistem.',[{l:'Kembali',f:jobList}]);
+  if(a)return show({k:'home'},'Kamu sudah punya lamaran di sini. Status: '+stText(j)+'.',[{l:'Kembali',f:jobList}]);
+  const total=S.cv.score+(S.edu===2?2:1)+rnd(2);
+  S.apps[j.id]={st:'wait',decide:S.day+1+rnd(2),pass:total>=j.thr};
+  S.energy=Math.max(0,S.energy-3);if(advance(15))return;
+  show({k:'home'},'Lamaran ke '+j.name+' terkirim. Biasanya dibalas 1-2 hari lewat email.',[{l:'Kembali',f:jobList}]);
+}
+
+// ===== CV =====
+function cvOpen(){cvDraft=S.cv?Object.assign({},S.cv.slots):{};cvSel='foto';scene='cv';}
+function cvScene(){
+  topbar();R(0,12,W,188,13);R(6,16,148,156,15);R(8,18,144,152,7);
+  T('RIAN PRATAMA',50,21,15,0);Ts(S.edu===2?'Lulusan S1':'Lulusan SMK',50,30,12,0);
+  CV_SLOTS.forEach(sl=>{
+    const sel=cvSel===sl.k,v=cvDraft[sl.k];
+    R(sl.x-1,sl.y-1,sl.w+2,sl.h+2,sel?8:12);R(sl.x,sl.y,sl.w,sl.h,v===undefined?13:6);
+    if(v===undefined)Ts(sl.n,sl.x+sl.w/2,sl.y+(sl.h-8>>1),12,1);
+    else if(sl.k==='foto'){const id=CV_CHIPS.foto[v].id,cx=sl.x+sl.w/2-8;R(cx,sl.y+5,16,16,5);R(cx,sl.y+5,16,5,15);R(cx+4,sl.y+13,2,2,0);R(cx+10,sl.y+13,2,2,0);
+      R(cx-6,sl.y+24,28,18,id==='f'?7:id==='k'?9:14);if(id==='f')R(cx+6,sl.y+24,4,16,8);if(id==='s'){R(cx,sl.y+2,3,4,14);R(cx+13,sl.y+2,3,4,14);}}
+    else{const ch=CV_CHIPS[sl.k][v],ls=wrap(ch.t,sl.w-4,'s');ls.slice(0,3).forEach((l,i)=>Ts(l,sl.x+2,sl.y+2+i*8,15,0));}
+    hits.push({x:sl.x,y:sl.y,w:sl.w,h:sl.h,fn:()=>{cvSel=sl.k;}});
+  });
+  box(158,16,156,156,6);
+  const cs=CV_SLOTS.find(s=>s.k===cvSel);Ts('Pilih isi: '+cs.n,164,21,15,0);
+  CV_CHIPS[cvSel].forEach((ch,i)=>{
+    const off=ch.req&&!S.hasFoto;
+    cbtn(162,32+i*21,148,19,ch.t+(off?' (butuh foto studio)':''),()=>{cvDraft[cvSel]=i;const nx=CV_SLOTS.find(s=>cvDraft[s.k]===undefined);if(nx)cvSel=nx.k;},{off:off,bg:cvDraft[cvSel]===i?11:7});
+  });
+  const n=CV_SLOTS.filter(s=>cvDraft[s.k]!==undefined).length;
+  Ts('Terisi '+n+'/6',200,180,15,0);
+  cbtn(6,176,90,18,n<6?'Lengkapi dulu':'Simpan CV',()=>{
+    S.cv={slots:Object.assign({},cvDraft),score:cvScore(cvDraft),skills:cvSkills(cvDraft)};
+    homeMenu('CV tersimpan. Cetak di fotokopi supaya siap dibawa interview.');
+  },{off:n<6});
+  cbtn(100,176,70,18,'Batal',()=>homeMenu(),{});
+}
+
+// ===== Fotokopi & Samsat =====
+function fcMenu(t){
+  if(!openCheck(1))return;
+  show({k:'fc'},t||'Fotokopi Cepat. Berkas siap: '+S.sets+' set. Pas foto studio: '+(S.hasFoto?'sudah':'belum')+'.\n1 set = CV + fotokopi KTP & ijazah.',[
+    {l:'Foto studio (Rp 15rb)',f:()=>{if(S.money<15000)return fcMenu('Uangmu tidak cukup.');S.money-=15000;S.hasFoto=true;if(advance(20))return;fcMenu('Foto selesai. Sekarang pilihan foto formal tersedia di CV (ubah CV di rumah).');}},
+    {l:'Cetak 1 set (Rp 4rb)',f:()=>buySets(1,4000)},
+    {l:'Cetak 3 set (Rp 10rb)',f:()=>buySets(3,10000)},
+    {l:'Ke peta',f:()=>{scene='map';selDest=-1;}}]);
+}
+function buySets(n,cost){
+  if(!S.cv)return fcMenu('CV belum dibuat (buat di rumah). Kamu hanya punya fotokopi KTP dan ijazah.');
+  if(S.money<cost)return fcMenu('Uangmu tidak cukup.');
+  S.money-=cost;S.sets+=n;if(advance(10))return;fcMenu('Selesai dicetak. Berkas siap: '+S.sets+' set.');
+}
+function samsatMenu(t){
+  if(!openCheck(2))return;
+  const ops=[];
+  const st='SIM: '+(S.sim?'ada':'belum')+' | STNK: '+(S.stnk?'pajak hidup':'pajak mati')+' | Motor: '+(S.motor?'ada':'disita');
+  if(!S.stnk)ops.push({l:'Bayar pajak STNK (Rp 150rb)',f:()=>{if(S.money<150000)return samsatMenu('Uangmu tidak cukup.');S.money-=150000;S.stnk=true;if(advance(60))return;samsatMenu('Antre sejam. Pajak STNK lunas, aman dari razia.');}});
+  if(!S.sim)ops.push({l:'Buat SIM C (Rp 120rb)',f:()=>{if(S.money<120000)return samsatMenu('Uangmu tidak cukup.');S.money-=120000;S.sim=true;S.energy=Math.max(0,S.energy-8);if(advance(120))return;samsatMenu('Antre, foto, ujian teori dan praktik. SIM C akhirnya jadi.');}});
+  if(!S.motor)ops.push({l:'Tebus motor (Rp 100rb)',f:()=>{if(S.money<100000)return samsatMenu('Uangmu tidak cukup.');S.money-=100000;S.motor=true;if(advance(45))return;samsatMenu('Motor berhasil ditebus.');}});
+  ops.push({l:'Ke peta',f:()=>{scene='map';selDest=-1;}});
+  show({k:'samsat'},t||('Kantor Samsat. Antrean mengular.\n'+st),ops);
+}
+
+// ===== Kantor =====
+function jobMenu(j,t){
+  if(!openCheck(JOBS[j].loc))return;
+  const job=JOBS[j];
+  show({k:'bld',j:j},t||(job.name+'. '+(job.tier===0?'Usaha kecil, pintu terbuka.':job.tier===1?'Gedung perkantoran dengan pos satpam.':'Gedung tinggi berkaca. Satpam berjaga di gerbang.')),[
+    {l:'Masuk / temui satpam',f:()=>gate(j)},{l:'Ke peta',f:()=>{scene='map';selDest=-1;}}]);
+}
+function gate(j){
+  const job=JOBS[j],a=S.apps[job.id];
+  if(job.tier===0){
+    return show({k:'bld',j:j},'Pemilik menyapa dari dalam: "Cari siapa, Mas? Mau melamar kerja?"',[
+      {l:'Ya, saya antar lamaran',f:()=>startIv(j,false)},{l:'Tidak jadi, permisi',f:()=>jobMenu(j)}]);
+  }
+  const ops=[];let txt='Satpam: "Selamat datang. Ada keperluan apa, Pak?"';
+  if(a&&a.st==='invite'){
+    if(a.invDay===S.day)ops.push({l:'Ada jadwal interview jam '+clk(a.invMin),f:()=>lobbyIn(j)});
+    else txt='Satpam: "Jadwal Bapak hari ke-'+a.invDay+', jam '+clk(a.invMin)+'. Hari ini belum ada."';
+  }else txt='Satpam: "Maaf, Pak. Di sini harus ada janji atau undangan dulu. Lamaran bisa lewat email atau dititip."';
+  if(!a)ops.push({l:'Titip lamaran (butuh 1 set)',f:()=>{
+    if(S.sets<1)return show({k:'gate',j:j},'Kamu tidak membawa berkas cetak. Satpam menggeleng.',[{l:'Kembali',f:()=>gate(j)}]);
+    S.sets--;S.apps[job.id]={st:'wait',decide:S.day+2,pass:(S.cv.score+(S.edu===2?2:1)+rnd(2)-1)>=job.thr};
+    show({k:'gate',j:j},'Satpam menerima berkasmu: "Nanti kami hubungi lewat email."',[{l:'Kembali',f:()=>jobMenu(j)}]);
+  }});
+  ops.push({l:'Pamit',f:()=>jobMenu(j)});
+  show({k:'gate',j:j},txt,ops);
+}
+function lobbyIn(j){
+  const job=JOBS[j],a=S.apps[job.id];
+  iv={j:j,job:job,si:0,bonus:0,qs:[],qi:0,score:0,div:null,react:''};
+  const late=S.min-a.invMin;
+  if(late>60){
+    a.st='rej';a.cool=S.day+3;
+    return show({k:'gate',j:j},'Kamu terlambat '+late+' menit. Resepsionis: "Mohon maaf, jadwal Bapak sudah dibatalkan."',[{l:'Pulang',f:()=>jobMenu(j)}]);
+  }
+  let t='Satpam: "Silakan, KTP ditukar kartu tamu ya."';
+  if(late>0){iv.bonus-=1;t+='\nKamu terlambat '+late+' menit. HRD pasti mencatatnya.';}
+  show({k:'gate',j:j},t,[{l:'Serahkan KTP, ambil kartu tamu',f:()=>lobbyDesk(j)}]);
+}
+function lobbyDesk(j){
+  show({k:'lobby',j:j},'Resepsionis: "Silakan isi buku tamu. Tujuan: HRD."',[
+    {l:'Isi lengkap dan rapi',f:()=>lobbyWait(j,0)},
+    {l:'Isi seadanya, tulisan asal',f:()=>lobbyWait(j,-1)}]);
+}
+function lobbyWait(j,b){
+  iv.bonus+=b;const a=S.apps[iv.job.id];
+  if(S.min<a.invMin){const w=a.invMin-S.min;advance(w);}
+  advance(10);
+  show({k:'lobby',j:j},'Kamu duduk di ruang tunggu. Jantung berdebar, dan HP-mu bergetar keras di saku.',[
+    {l:'Silent-kan HP, tarik napas',f:()=>{iv.bonus+=1;runStage();}},
+    {l:'Biarkan saja, buka medsos',f:()=>{runStage();}}]);
+}
+function startIv(j,x){
+  const job=JOBS[j];
+  iv={j:j,job:job,si:0,bonus:0,qs:[],qi:0,score:0,div:null,react:''};
+  show({k:'bld',j:j},'Kamu masuk dan menyerahkan lamaran langsung.',[{l:'Lanjut',f:runStage}]);
+}
+const WHO={owner:'owner',psiko:'psiko',hrd:'hrd',user:'user',dir:'dir'};
+const INTRO={owner:'Pemilik usaha menyambutmu santai sambil membolak-balik CV-mu.',psiko:'Kamu diminta mengerjakan psikotes singkat di ruang tes.',hrd:'HRD tersenyum: "Silakan duduk. Kita mulai wawancaranya."',user:'Calon atasan (user) masuk membawa CV-mu dan duduk di depanmu.',dir:'Direktur menatapmu dari balik meja besar. Ini tahap terakhir.'};
+function runStage(){
+  const st=iv.job.stages[iv.si];
+  if(!st)return offer();
+  if(st.k==='admin')return adminCheck();
+  if(st.k==='user'&&st.div&&!iv.div)return pickDiv();
+  const key=st.k==='user'?(iv.div||'admin'):st.k;
+  iv.qs=shuf(BANK[key]).slice(0,st.n);iv.qi=0;iv.score=0;iv.react='';
+  show({k:'room',who:WHO[st.k]},'Tahap '+(iv.si)+'/'+(iv.job.stages.length-1)+'. '+INTRO[st.k],[{l:'Mulai',f:askQ}],{ah:62});
+}
+function adminCheck(){
+  const job=iv.job;
+  if(S.sets<job.sets){
+    return show({k:iv.job.tier?'lobby':'bld',j:iv.j},'"Berkasnya kurang. Perlu '+job.sets+' set (CV, KTP, ijazah). Bapak baru bawa '+S.sets+'." Lengkapi di fotokopi lalu kembali selama jadwal masih berlaku.',[{l:'Keluar & lengkapi berkas',f:()=>{S.at=job.loc;scene='map';selDest=-1;}}]);
+  }
+  S.sets-=job.sets;iv.si++;
+  show({k:iv.job.tier?'lobby':'bld',j:iv.j},'Berkas diperiksa: CV, KTP, dan ijazah lengkap. "Baik, silakan tunggu sebentar."',[{l:'Lanjut',f:runStage}]);
+}
+function pickDiv(){
+  show({k:'room',who:'hrd'},'HRD: "Divisi mana yang paling kamu minati? Penempatan ini menentukan wawancara berikutnya."',[
+    {l:'Administrasi (data dan laporan)',f:()=>{iv.div='admin';runStage();}},
+    {l:'Operasional (logistik dan kontrol)',f:()=>{iv.div='ops';runStage();}},
+    {l:'Pemasaran (promosi dan klien)',f:()=>{iv.div='mkt';runStage();}}],{ah:62});
+}
+function askQ(){
+  const st=iv.job.stages[iv.si],q=iv.qs[iv.qi];
+  const ops=shuf(q.o).map(o=>({l:o[0],f:()=>answer(o[1]),dim:S.conf>=4&&o[1]===0}));
+  show({k:'room',who:WHO[st.k]},(iv.react?iv.react+'\n':'')+'['+(iv.qi+1)+'/'+st.n+'] '+q.q,ops,{ah:62});
+}
+function answer(sc){
+  iv.score+=sc;iv.react=sc===2?'Mengangguk puas.':sc===1?'Mencatat tanpa ekspresi.':'Mengerutkan dahi.';iv.qi++;
+  const st=iv.job.stages[iv.si];
+  if(iv.qi<st.n)return askQ();
+  endStage();
+}
+function endStage(){
+  const st=iv.job.stages[iv.si],job=iv.job,tier=job.tier;
+  let bonus=Math.min(2,Math.floor(S.conf/2))+iv.bonus;
+  const sk=S.cv?S.cv.skills:[];
+  if(st.k==='hrd'&&S.cv&&S.cv.score>=10)bonus+=1;
+  if(st.k==='hrd'&&tier===2&&sk.includes('inggris'))bonus+=1;
+  if(st.k==='user'){const d=iv.div||'admin';if((d==='admin'&&(sk.includes('excel')||sk.includes('ngetik')))||(d==='ops'&&sk.includes('komunikasi'))||(d==='mkt'&&(sk.includes('komunikasi')||sk.includes('desain'))))bonus+=1;}
+  if(st.k==='dir'&&sk.includes('inggris'))bonus+=1;
+  if(S.energy<15)bonus-=1;
+  const thr=Math.ceil(st.n*(0.9+0.3*tier)),total=iv.score+bonus;
+  S.energy=Math.max(0,S.energy-8);
+  const out=iv.react;
+  if(advance(25))return;
+  if(total>=thr){
+    iv.si++;iv.bonus=0;
+    const last=!job.stages[iv.si];
+    show({k:'room',who:WHO[st.k]},out+'\nKamu lolos tahap ini'+(last?'. Tinggal menunggu keputusan akhir.':'. Silakan tunggu untuk tahap berikutnya.'),[{l:'Lanjut',f:runStage}],{ah:62});
+  }else{
+    const a=S.apps[job.id]||(S.apps[job.id]={});a.st='rej';a.cool=S.day+3;
+    show({k:'room',who:WHO[st.k]},out+'\n"Terima kasih sudah datang. Kami akan kabari lewat email." Kamu paham, ini artinya belum lolos. Coba lagi dengan persiapan lebih baik.',[{l:'Pulang',f:()=>{S.at=job.loc;jobMenu(iv.j);}}],{ah:62});
+  }
+}
+function offer(){
+  const job=iv.job;
+  show({k:'room',who:job.tier===0?'owner':job.tier===1?'hrd':'dir'},'Selamat! Kamu ditawari posisi '+job.pos+' di '+job.name+' dengan gaji '+rp(job.sal)+' per bulan. Mulai kerja Senin depan.',[
+    {l:'Terima tawaran',f:win},
+    {l:'Tolak, lanjut cari lain',f:()=>{const a=S.apps[job.id]||(S.apps[job.id]={});a.st='rej';a.cool=S.day+3;S.at=job.loc;jobMenu(iv.j);}}],{ah:62});
+}
+function win(){
+  const job=iv.job;clearSave();hasSave=false;
+  show({k:'win'},'Kamu diterima sebagai '+job.pos+' di '+job.name+'!\nGaji '+rp(job.sal)+' | Hari ke-'+S.day+' | Sisa uang '+rp(S.money)+'\nLevel 1 selesai: dari CV sampai tanda tangan kontrak.',[{l:'Main lagi',f:()=>{scene='title';}}]);
+}
+JOBS.forEach(j=>{j.stages=STAGES[j.tier];});
+
+// ===== Loop =====
+let last=performance.now();
+function frame(now){
+  const dt=Math.min(.1,(now-last)/1000);last=now;tNow+=dt;hits=[];
+  if(scene==='trip'&&trip){trip.t+=dt;if(trip.t>=1.5&&!trip.done){trip.done=true;resolveTrip();}}
+  if(scene==='title')titleScene();
+  else if(scene==='map')mapScene();
+  else if(scene==='cv')cvScene();
+  else if(scene==='trip')drawTrip();
+  else if(scene==='say'&&cur)drawSay();
+  requestAnimationFrame(frame);
+}
+cv.addEventListener('pointerdown',e=>{
+  const [px,py]=pos(e);M.x=px;M.y=py;
+  for(let i=hits.length-1;i>=0;i--){const h=hits[i];if(px>=h.x&&px<h.x+h.w&&py>=h.y&&py<h.y+h.h){if(!h.off)h.fn();break;}}
+});
+cv.addEventListener('pointermove',e=>{const [px,py]=pos(e);M.x=px;M.y=py;});
+cv.addEventListener('pointerleave',()=>{M.x=-1;M.y=-1;});
+function pos(e){const r=cv.getBoundingClientRect();return[(e.clientX-r.left)*W/r.width,(e.clientY-r.top)*H/r.height];}
+hasSave=!!load();
+window.job={get S(){return S;},get scene(){return scene;},get cur(){return cur;},get iv(){return iv;},
+  pick:i=>{const o=cur.opts[i];if(o&&!o.off)o.f();},labels:()=>cur?cur.opts.map(o=>o.l):[],
+  show:show,newGame:newGame,go:(to,m)=>startTrip(to,m||'motor'),setCV:()=>{cvOpen();[0,0,0,0,0,1].forEach((v,i)=>{cvDraft[CV_SLOTS[i].k]=v===1?1:0;});S.cv={slots:Object.assign({},cvDraft),score:cvScore(cvDraft),skills:cvSkills(cvDraft)};homeMenu('x');},
+  hasFoto:()=>{S.hasFoto=true;}};
+requestAnimationFrame(frame);
+</script></body></html>
