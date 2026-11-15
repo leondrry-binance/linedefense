@@ -890,15 +890,25 @@ function drawSayP(){
   const lines=[];String(c.text).split('\n').forEach(s=>wrap(s,W-12,'b').forEach(l=>lines.push(l)));
   const ops=c.opts,n=ops.length;
   let bh=ops.some(o=>tw(o.l,'b')>W-18)?19:16;
-  const th=lines.length*10+10;
-  if(th+n*(bh+2)+8>H-TOP-130)bh=13;
-  const step=bh+2,need=th+n*step+8;
-  const ah=Math.max(90,Math.min(220,H-TOP-need)),py=TOP+ah;
+  const AMIN=90,room=H-TOP-AMIN;
+  if(lines.length*10+10+n*(bh+2)+8>room)bh=13;
+  const step=bh+2,optH=n*step+8;
+  const capLast=Math.max(3,Math.floor((room-optH-10)/10));
+  const capMid=Math.max(3,Math.floor((room-(16+2)-14)/10));
+  let np=1;while(lines.length>(np-1)*capMid+capLast)np++;
+  const chunk=Math.ceil(lines.length/np),pages=[];
+  for(let k=0;k<np;k++)pages.push(lines.slice(k*chunk,(k+1)*chunk));
+  if(c.pg===undefined||c.pg>=pages.length)c.pg=0;
+  const last=c.pg===pages.length-1,pl=pages[c.pg];
+  const th=pl.length*10+10;
+  const bn=last?n:1,need=th+(last?optH:(16+2)+8);
+  const ah=Math.max(AMIN,Math.min(220,H-TOP-need)),py=TOP+ah;
   drawArt(c.art,ah);
   R(0,py,W,H-py,15);R(2,py+2,W-4,H-py-4,6);R(0,py,W,2,9);
-  lines.forEach((l,i)=>T(l,6,py+6+i*10,15,0));
+  pl.forEach((l,i)=>T(l,6,py+6+i*10,15,0));
   const y0=py+th+2;
-  ops.forEach((o,i)=>cbtn(6,y0+i*step,W-12,bh,o.l,()=>{if(!o.off)o.f();},{off:o.off,dim:o.dim}));
+  if(last)ops.forEach((o,i)=>cbtn(6,y0+i*step,W-12,bh,o.l,()=>{if(!o.off)o.f();},{off:o.off,dim:o.dim}));
+  else cbtn(6,y0,W-12,16,'Lanjut baca ('+(c.pg+1)+'/'+pages.length+')',()=>{c.pg++;},{});
 }
 function titleP(){
   R(0,0,W,H,1);for(let i=0;i<34;i++)R((i*53)%W,(i*37)%(H*.4|0),1,1,7);R(160,36,14,14,6);R(165,36,10,12,1);
