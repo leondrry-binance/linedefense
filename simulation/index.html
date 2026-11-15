@@ -1,0 +1,412 @@
+<!doctype html>
+<html lang="id"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Pelayaran Dagang</title>
+<style>
+html,body{margin:0;height:100%;background:#000;overflow:hidden}
+body{display:flex;align-items:center;justify-content:center}
+canvas{image-rendering:pixelated;image-rendering:crisp-edges;touch-action:manipulation;background:#000;display:block}
+</style></head><body>
+<canvas id="c" width="640" height="400"></canvas>
+<script>
+'use strict';
+// ===== Layar 320x200, palet 16 warna ala EGA, diperbesar tanpa blur =====
+const W=320,H=200,cv=document.getElementById('c'),g=cv.getContext('2d');
+g.setTransform(2,0,0,2,0,0);g.imageSmoothingEnabled=false;
+function fit(){const s=Math.min(innerWidth/640,innerHeight/400);const k=s>=1?Math.floor(s*2)/2:s;cv.style.width=(640*k)+'px';cv.style.height=(400*k)+'px';}
+addEventListener('resize',fit);fit();
+const P=['#000000','#1b2a8a','#2f6fd8','#7fb3ff','#8a4b1c','#d89a4a','#f3d9a0','#ffffff','#b02a2a','#e86a3a','#3c8a3c','#a8d870','#555555','#aaaaaa','#7a3fa0','#2a1a10'];
+const hexrgb=h=>[parseInt(h.substr(1,2),16),parseInt(h.substr(3,2),16),parseInt(h.substr(5,2),16)];
+function R(x,y,w,h,c){g.fillStyle=P[c];g.fillRect(Math.round(x),Math.round(y),Math.round(w),Math.round(h));}
+function box(x,y,w,h,fill){R(x,y,w,h,15);R(x+1,y+1,w-2,h-2,9);R(x+2,y+2,w-4,h-4,15);R(x+3,y+3,w-6,h-6,fill===undefined?6:fill);}
+
+// ===== Teks piksel: font bitmap asli (6x10 dan 5x8, domain publik X11 fixed), tanpa anti-alias =====
+const FD={"b": {"w": 6, "h": 10, "d": "0000000000000000000000040404040400040000000a0a0a000000000000000a0a1f0a1f0a0a000000040e140e050e0400000009150a040a15120000000814140815120d00000006040800000000000000020408080804020000000804020202040800000000110a1f0a11000000000004041f040400000000000000000006040800000000001f0000000000000000000000040e04000001010204081010000000040a1111110a04000000040c140404041f0000000e11010608101f0000001f01020601110e00000002060a121f02020000001f10161901110e0000000608101619110e0000001f0102020408080000000e11110e11110e0000000e11130d01020c00000000040e0400040e04000000040e040006040800000102040804020100000000001f001f0000000000100804020408100000000e1102040400040000000e11131516100e000000040a11111f11110000001e09090e09091e0000000e11101010110e0000001e09090909091e0000001f10101e10101f0000001f10101e1010100000000e11101013110e0000001111111f1111110000000e04040404040e0000000701010101110e000000111214181412110000001010101010101f00000011111b15111111000000111119151311110000000e11111111110e0000001e11111e1010100000000e11111111150e0100001e11111e1412110000000e11100e01110e0000001f0404040404040000001111111111110e0000001111110a0a0a0400000011111115151b1100000011110a040a111100000011110a040404040000001f01020408101f0000000e08080808080e000000101008040201010000000e02020202020e000000040a1100000000000000000000000000001f00000c04020000000000000000000e010f110f0000001010161911191600000000000e1110110e00000001010d1311130d00000000000e111f100e0000000609081e08080800000000000d120c100e110e001010161911111100000004000c0404040e00000002000602020212120c00101011121c12110000000c04040404040e00000000001a151515110000000000161911111100000000000e1111110e0000000000161919161010100000000d13130d010101000000161910101000000000000e100e011e00000008081e080809060000000000111111130d000000000011110a0a040000000000111115150a0000000000110a040a1100000000001111130d01110e0000001f0204081f0000000304020c0204030000000404040404040400000018040806080418000000091512000000000000"}, "s": {"w": 5, "h": 8, "d": "00000000000000000004040404000400000a0a0a000000000a0a1f0a1f0a0a00040e140e050e040000080a040a0200000814140814140a000004040400000000000408080808040000080404040408000000120c1e0c1200000004041f0404000000000000060408000000001e0000000000000000040e04000202040810100000040a0a0a0a040000040c0404040e00000c12020c101e00001e040c02120c0000040c141e040400001e101c02120c00000c101c12120c00001e020404080800000c120c12120c00000c12120e020c0000000c0c000c0c00000006060006040800020408080402000000001e001e0000000804020204080000040a02040004000609131515120806000c12121e121200001c121c12121c00000c121010120c00001c121212121c00001e101c10101e00001e101c10101000000c121016120c000012121e12121200000e040404040e00000e04040414080000121418141412000010101010101e0000121e1e1212120000121a1e16161200000c121212120c00001c12121c101000000c12121a160c02001c12121c121200000c120804120c00000e0404040404000012121212120c0000121212120c0c00001212121e1e12000012120c0c1212000011110a04040400001e020408101e00000e080808080e000010100804020200000e020202020e0000040a0000000000000000000000001e00080400000000000000000e12120e000010101c12121c0000000006080806000002020e12120e000000000c16180c0000040a081c0808000000000c120e020c0010101c121212000004000c04040e000002000202020a04001010121c121200000c040404040e000000001a151515000000001c121212000000000c12120c000000001c121c10100000000e120e0202000000141a101000000000060c020c000008081c080a04000000001212120e000000000a0a0a04000000001115150a00000000120c0c120000000012120e120c0000001e04081e00060804180408060000040404040404001804080608041800000a140000000000"}};
+const FONTS={};
+for(const k in FD){const f=FD[k];FONTS[k]={w:f.w,h:f.h,g:[]};
+  for(let i=0;i<95;i++){const r=[];for(let j=0;j<f.h;j++)r.push(parseInt(f.d.substr((i*f.h+j)*2,2),16));FONTS[k].g.push(r);}}
+let tcache={},tcount=0;
+function glyph(s,col,fk){
+  const k=fk+col+'|'+s;if(tcache[k])return tcache[k];
+  if(tcount>1500){tcache={};tcount=0;}
+  const F=FONTS[fk],w=Math.max(1,s.length*F.w),o=document.createElement('canvas');o.width=w;o.height=F.h;
+  const og=o.getContext('2d');og.fillStyle=col;
+  for(let i=0;i<s.length;i++){let c=s.charCodeAt(i)-32;if(c<0||c>94)c=31;const rows=F.g[c];
+    for(let y=0;y<F.h;y++){const b=rows[y];if(!b)continue;for(let x=0;x<F.w;x++)if(b&(1<<(F.w-1-x)))og.fillRect(i*F.w+x,y,1,1);}}
+  tcount++;return tcache[k]={c:o,w:w,h:F.h};
+}
+function T(s,x,y,col,al,sc,fk){
+  s=String(s);if(col===undefined)col=7;sc=sc||1;fk=fk||'b';const o=glyph(s,P[col],fk);const w=o.w*sc;
+  if(al===1)x-=w>>1;else if(al===2)x-=w;
+  g.drawImage(o.c,Math.round(x),Math.round(y),w,o.h*sc);return w;
+}
+function Ts(s,x,y,col,al){return T(s,x,y,col,al,1,'s');}
+function tw(s,fk){return String(s).length*FONTS[fk||'b'].w;}
+function wrap(s,maxw,fk){const out=[];let line='';for(const w of s.split(' ')){const t=line?line+' '+w:w;if(tw(t,fk)>maxw&&line){out.push(line);line=w;}else line=t;}if(line)out.push(line);return out;}
+
+// ===== Sprite dan gambar =====
+function galleon(x,y,cs,ct,cm,ch,cd,cg,cf){
+  // kapal layar 24x20; cs layar, ct bayangan layar, cm tiang, ch lambung, cd lambung gelap, cg garis emas, cf bendera
+  R(x+11,y+1,1,14,cm);R(x+4,y+8,1,7,cm);R(x+19,y+6,1,9,cm);
+  R(x+12,y,5,2,cf);R(x+5,y+6,3,2,cf);
+  R(x+8,y+2,7,4,cs);R(x+8,y+5,7,1,ct);
+  R(x+6,y+6,11,4,cs);R(x+6,y+9,11,1,ct);R(x+8,y+7,2,1,ct);
+  R(x+5,y+10,13,4,cs);R(x+5,y+13,13,1,ct);R(x+9,y+11,2,1,ct);
+  R(x+16,y+7,7,4,cs);R(x+16,y+10,7,1,ct);
+  R(x+1,y+9,6,4,cs);R(x+1,y+12,6,1,ct);
+  R(x+1,y+15,22,1,cd);R(x+1,y+16,22,2,ch);R(x+2,y+18,20,1,cd);R(x+4,y+19,16,1,cd);
+  R(x+1,y+16,22,1,cg);R(x+0,y+14,4,2,ch);R(x+21,y+14,3,2,ch);
+  R(x+6,y+17,2,1,cd);R(x+11,y+17,2,1,cd);R(x+16,y+17,2,1,cd);
+}
+const HI={15:12,12:13,4:5,7:13,2:3,8:9,10:11,14:13,5:6,9:5};
+// Potret digambar 2x lebih halus (128x116 piksel fisik) supaya wajah jelas
+let PX=0,PY=0;
+function r(x,y,w,h,c){g.fillStyle=P[c];g.fillRect(PX+x,PY+y,w,h);}
+function oval(cx,cy,rx,ry,c){for(let j=-ry;j<=ry;j++){const w=Math.round(rx*Math.sqrt(Math.max(0,1-(j*j)/(ry*ry+.0001))));r(cx-w,cy+j,w*2,1,c);}}
+function portrait(x,y,p,talk){
+  g.save();g.setTransform(1,0,0,1,0,0);PX=Math.round(x*2);PY=Math.round(y*2);g.beginPath();g.rect(PX,PY,128,116);g.clip();
+  const hair=p.hair===undefined?15:p.hair,hi=HI[p.hat]||p.hat,chi=HI[p.coat]||p.coat,vest=p.vest===undefined?7:p.vest;
+  // dinding kayu dan rak
+  r(0,0,128,116,15);r(2,2,124,112,4);
+  for(let i=1;i<8;i++)r(i*16,2,1,112,15);
+  r(2,34,124,4,15);r(2,34,124,1,5);r(2,70,124,4,15);r(2,70,124,1,5);
+  for(let i=0;i<6;i++){const bx=6+i*20;
+    if(i%3===0){r(bx,16,16,18,5);r(bx,20,16,2,15);r(bx,28,16,2,15);r(bx+2,16,3,18,6);r(bx+1,15,14,2,6);}
+    else if(i%3===1){r(bx+3,20,10,14,10);r(bx+5,14,6,6,13);r(bx+6,12,4,2,4);r(bx+4,22,2,10,11);}
+    else{oval(bx+8,26,9,8,6);r(bx+6,16,4,4,4);r(bx+12,22,3,10,5);}
+    if(i%2===0){r(bx,46,6,24,8);r(bx+6,50,6,20,2);r(bx+12,48,6,22,10);r(bx+1,46,1,24,9);}
+    else{r(bx+1,52,14,18,3);r(bx,50,16,3,13);r(bx+3,54,3,12,7);}
+  }
+  // badan: jubah, rompi, kerah berkerut
+  oval(64,128,60,38,p.coat);r(34,94,60,2,chi);r(26,102,1,16,15);r(102,102,1,16,15);r(18,104,1,14,chi);
+  r(50,88,28,28,vest);r(49,88,1,28,15);r(78,88,1,28,15);
+  for(let k=0;k<3;k++){r(63,96+k*8,3,3,5);r(63,96+k*8,1,1,6);}
+  r(36,82,56,9,7);r(36,90,56,2,13);
+  for(let i=0;i<8;i++){oval(39+i*7,83,4,5,7);r(37+i*7,86,1,6,13);}
+  r(58,90,12,5,5);r(58,90,12,1,6);
+  r(52,72,24,14,4);
+  // kepala
+  oval(64,54,22,27,4);oval(61,54,20,26,5);oval(55,42,10,7,6);oval(51,62,6,4,6);
+  r(44,50,2,6,4);oval(42,56,3,7,5);oval(86,56,3,7,4);r(41,54,1,5,4);
+  r(46,36,36,2,4);
+  // alis dan mata
+  r(47,43,13,2,hair);r(52,41,9,2,hair);r(68,43,13,2,hair);r(68,41,9,2,hair);
+  for(const ex of [49,69]){r(ex,46,10,1,15);r(ex,47,10,6,7);r(ex+3,47,5,6,p.eye===undefined?4:p.eye);r(ex+4,48,3,4,0);r(ex+4,48,1,1,7);r(ex,53,10,1,4);r(ex,45,10,1,4);}
+  // hidung
+  r(62,50,2,12,6);r(65,50,3,12,4);r(59,62,11,3,4);r(60,64,3,1,15);r(66,64,3,1,15);r(61,60,3,3,5);
+  // jenggot (opsional), kumis, mulut
+  if(p.beard){oval(64,73,17,11,hair);r(45,60,3,13,hair);r(80,60,3,13,hair);
+    for(let k=0;k<5;k++){r(52+k*6,76+(k%2)*3,1,9-(k%2)*2,12);}}
+  r(50,66,14,3,hair);r(64,66,14,3,hair);r(47,67,4,3,hair);r(77,67,4,3,hair);r(55,66,5,1,12);r(68,66,5,1,12);
+  if(talk){r(56,71,16,6,0);r(57,71,14,2,7);r(59,75,10,2,8);}
+  else if(p.beard){r(56,71,16,2,0);r(57,70,14,1,8);}
+  else{r(56,71,16,2,8);r(56,73,16,1,4);r(58,75,12,2,4);}
+  // topi
+  oval(64,17,22,14,p.hat);oval(56,9,9,3,hi);
+  oval(64,30,38,5,p.hat);r(26,30,76,2,p.hat);r(26,32,76,1,15);r(42,24,44,5,15);r(60,23,8,8,5);r(62,25,4,4,15);
+  if(p.plume){r(82,4,3,18,p.plume);r(85,2,3,12,p.plume);r(88,1,3,7,p.plume);r(83,6,1,12,9);}
+  g.restore();
+}
+function waves(x,y,w,h,t){
+  R(x,y,w,h,2);
+  for(let j=0;j<h-4;j+=6){for(let i=-8;i<w;i+=10){const o=((j/6|0)%2)*5+((t*8)|0)%10;R(x+((i+o)%w+w)%w,y+j+2,4,1,3);R(x+((i+o+2)%w+w)%w,y+j+3,2,1,3);}}
+}
+function compass(cx,cy){
+  for(let i=-14;i<=14;i++){const wd=14-Math.abs(i);R(cx-wd,cy+i,wd*2+1,1,i%2?4:5);}
+  for(let i=-8;i<=8;i++){const wd=8-Math.abs(i);R(cx-wd,cy+i,wd*2+1,1,Math.abs(i)<3?8:15);}
+  R(cx-1,cy-1,3,3,7);
+}
+
+// ===== Peta Eropa gaya piksel (dibuat sekali) =====
+const POLY=[
+ [1,[[128,30],[142,24],[150,34],[160,44],[154,56],[142,60],[132,52],[126,40]]],
+ [2,[[112,40],[122,38],[124,50],[114,52]]],
+ [3,[[162,52],[176,50],[190,40],[210,34],[250,36],[290,44],[310,60],[300,80],[262,92],[236,96],[212,100],[196,96],[178,104],[150,110],[112,106],[100,96],[104,78],[130,70],[150,64]]],
+ [4,[[50,112],[70,106],[110,104],[120,112],[110,132],[96,148],[70,150],[50,138],[46,124]]],
+ [5,[[188,100],[204,98],[212,110],[224,128],[228,142],[218,140],[206,122],[194,112]]],
+ [6,[[40,168],[120,160],[200,164],[250,170],[310,168],[320,168],[320,200],[40,200]]],
+ [7,[[190,10],[214,4],[236,8],[230,24],[210,30],[196,26]]]];
+const LCOL=[0,10,10,10,11,10,5,10];
+let mapCv=null;
+function inPoly(pts,x,y){let c=false;for(let i=0,j=pts.length-1;i<pts.length;j=i++){const xi=pts[i][0],yi=pts[i][1],xj=pts[j][0],yj=pts[j][1];
+  if(((yi>y)!==(yj>y))&&(x<(xj-xi)*(y-yi)/(yj-yi)+xi))c=!c;}return c;}
+function buildMap(){
+  // dihitung sendiri (tanpa membaca balik piksel kanvas, yang bisa diacak oleh perlindungan privasi browser HP)
+  const grid=new Uint8Array(W*H);
+  for(const [id,pts] of POLY)for(let y=0;y<H;y++)for(let x=0;x<W;x++)if(inPoly(pts,x+.5,y+.5))grid[y*W+x]=id;
+  const m=document.createElement('canvas');m.width=W;m.height=H;const mg=m.getContext('2d');
+  mg.fillStyle=P[2];mg.fillRect(0,0,W,H);
+  for(let y=0;y<H;y+=7)for(let x=((y/7|0)%2)*6;x<W;x+=12){mg.fillStyle=P[1];mg.fillRect(x,y,4,1);}
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+    const id=grid[y*W+x];if(!id)continue;
+    const edge=(x>0&&!grid[y*W+x-1])||(x<W-1&&!grid[y*W+x+1])||(y>0&&!grid[(y-1)*W+x])||(y<H-1&&!grid[(y+1)*W+x]);
+    mg.fillStyle=P[edge?15:LCOL[id]];if(!edge&&((x*7+y*13)%11===0))mg.fillStyle=P[id===6?4:10];mg.fillRect(x,y,1,1);
+  }
+  mapCv=m;
+}
+
+// ===== Data permainan =====
+const GOODS=[['Wine',40],['Wool',30],['Iron',50],['Sugar',70],['Spice',120],['Silk',160]];
+const PORTS=[
+ {n:'London',r:'N. Europe',x:152,y:54,eco:720,m:[1.4,.7,.9,1.3,1.5,1.5],coat:8,hat:15,plume:0,hair:15,beard:1,vest:7,lab:[-42,-4]},
+ {n:'Amsterdam',r:'N. Europe',x:174,y:50,eco:640,m:[1.3,.9,.7,1.2,1.0,1.3],coat:2,hat:4,plume:0,hair:4,beard:0,vest:13,lab:[6,-4]},
+ {n:'Lisbon',r:'Iberia',x:54,y:126,eco:560,m:[.7,1.2,1.2,.9,1.2,1.3],coat:10,hat:15,plume:8,hair:15,beard:1,vest:5,lab:[-6,-14]},
+ {n:'Seville',r:'Iberia',x:80,y:144,eco:600,m:[.8,1.2,1.1,.7,1.1,1.2],coat:14,hat:15,plume:7,hair:15,beard:0,vest:8,lab:[-6,5]},
+ {n:'Genoa',r:'Mediterr.',x:186,y:102,eco:680,m:[.9,1.3,1.2,1.1,.9,.7],coat:4,hat:12,plume:0,hair:12,beard:1,vest:6,lab:[-8,5]},
+ {n:'Alexandria',r:'E. Medit.',x:290,y:166,eco:520,m:[1.6,1.5,1.5,.8,.6,.8],coat:5,hat:7,plume:9,hair:15,beard:1,vest:8,lab:[-62,-14]}];
+const CAP=60,SUPCAP=40,SUPPRICE=2,SELLCUT=0.88;
+const MENU=['Buy Goods','Sell Goods','Provisions','Market','Set Sail'];
+const SAVEKEY='crtive_sim_save_v1';
+
+let S=null,scene='title',menuSel=0,hits=[],M={x:-1,y:-1},tNow=0,q=[0,0,0,0,0,0],selDest=-1;
+let say_s='',say_n=0,sail=null,ev=null,hasSave=false;
+
+function say(s){say_s=s;say_n=0;}
+function newGame(){
+  S={day:0,min:9*60,gold:300,fame:0,sup:10,at:0,hold:[0,0,0,0,0,0],avg:[0,0,0,0,0,0],stock:[]};
+  for(let p=0;p<PORTS.length;p++){S.stock.push(GOODS.map(()=>18+Math.floor(Math.random()*26)));}
+  q=[0,0,0,0,0,0];scene='port';menuSel=0;ev=null;sail=null;
+  say('Welcome to '+PORTS[0].n+', Captain! How may I help you?');
+}
+function save(){try{localStorage.setItem(SAVEKEY,JSON.stringify(S));}catch(e){}}
+function load(){try{const j=localStorage.getItem(SAVEKEY);if(j){const o=JSON.parse(j);if(o&&o.stock&&o.hold)return o;}}catch(e){}return null;}
+function holdTotal(){return S.hold.reduce((a,b)=>a+b,0);}
+function dateStr(){const d=new Date(1522,4,17+S.day);return['Jan.','Feb.','Mar.','Apr.','May','Jun.','Jul.','Aug.','Sep.','Oct.','Nov.','Dec.'][d.getMonth()]+' '+d.getDate();}
+function yearStr(){const d=new Date(1522,4,17+S.day);return d.getFullYear()+' A.D.';}
+function clockStr(){let h=Math.floor(S.min/60)%24;const m=S.min%60,ap=h>=12?'PM':'AM';h=h%12||12;return h+':'+(m<10?'0':'')+m+' '+ap;}
+function dayTick(){for(let p=0;p<PORTS.length;p++)for(let i=0;i<6;i++){const s=S.stock[p][i];S.stock[p][i]=s+(s<30?1:s>30?-1:0)+(Math.random()<.3?(Math.random()<.5?-1:1):0);if(S.stock[p][i]<0)S.stock[p][i]=0;}}
+function act(m){S.min+=m;if(S.min>=1440){S.min-=1440;S.day++;dayTick();}}
+function price(p,i){const P0=PORTS[p],st=S.stock[p][i];return Math.max(1,Math.round(GOODS[i][1]*P0.m[i]*(1+.12*Math.sin(S.day/6+i*1.7+p*.9))*(1-(st-30)/250)));}
+function sellPrice(p,i){return Math.max(1,Math.floor(price(p,i)*SELLCUT));}
+function pindex(p){let a=0;for(let i=0;i<6;i++)a+=price(p,i)/(GOODS[i][1]*PORTS[p].m[i]);return Math.round(a/6*100);}
+function dist(a,b){return Math.hypot(PORTS[a].x-PORTS[b].x,PORTS[a].y-PORTS[b].y);}
+function daysTo(a,b){return Math.max(2,Math.round(dist(a,b)/15));}
+
+// ===== Tombol dan input =====
+function btn(x,y,w,h,label,fn,o){
+  o=o||{};const hov=M.x>=x&&M.x<x+w&&M.y>=y&&M.y<y+h&&!o.off;const sel=o.sel||hov;
+  if(!o.flat){R(x,y,w,h,sel?0:o.off?13:15);if(!sel&&!o.off)R(x+1,y+1,w-2,h-2,o.bg===undefined?6:o.bg);else if(!sel)R(x+1,y+1,w-2,h-2,6);}
+  else if(sel)R(x,y,w,h,0);
+  if(label==='-')R(x+w/2-2,y+h/2,5,1,sel?7:15);else T(label,o.left?x+4:x+w/2,y+(h-9)/2|0,sel?7:o.off?12:15,o.left?0:1);
+  hits.push({x:x,y:y,w:w,h:h,fn:fn,off:o.off});
+}
+function pos(e){const r=cv.getBoundingClientRect();return[(e.clientX-r.left)*W/r.width,(e.clientY-r.top)*H/r.height];}
+cv.addEventListener('pointerdown',e=>{
+  const [px,py]=pos(e);M.x=px;M.y=py;
+  for(let i=hits.length-1;i>=0;i--){const h=hits[i];if(px>=h.x&&px<h.x+h.w&&py>=h.y&&py<h.y+h.h){if(!h.off)h.fn();break;}}
+});
+cv.addEventListener('pointermove',e=>{const [px,py]=pos(e);M.x=px;M.y=py;});
+cv.addEventListener('pointerleave',()=>{M.x=-1;M.y=-1;});
+addEventListener('keydown',e=>{
+  if(scene==='title'){if(e.key==='Enter'){S=load()||null;if(S&&hasSave){scene='port';say('Welcome back, Captain!');}else newGame();}return;}
+  if(ev){if(e.key==='Enter'||e.key===' ')ev.fn();return;}
+  const portScn=['port','buy','sell','prov','market'].includes(scene);
+  if(portScn){
+    if(e.key==='ArrowDown'){menuSel=(menuSel+1)%MENU.length;}
+    else if(e.key==='ArrowUp'){menuSel=(menuSel+MENU.length-1)%MENU.length;}
+    else if(e.key==='Enter'){menuAct(menuSel);}
+    else if(e.key==='Escape'){scene='port';say('How may I help you?');}
+  }else if(scene==='map'&&e.key==='Escape'){scene='port';selDest=-1;}
+});
+
+// ===== Aksi =====
+function menuAct(i){
+  menuSel=i;q=[0,0,0,0,0,0];
+  if(i===0){scene='buy';say('What would you like to buy, Captain?');}
+  else if(i===1){scene='sell';say(holdTotal()?'What would you like to sell?':'Your hold is empty, Captain.');}
+  else if(i===2){scene='prov';say('Provisions keep the crew alive at sea. '+SUPPRICE+' gold per day.');}
+  else if(i===3){scene='market';say('Here are the prices today.');}
+  else if(i===4){scene='map';selDest=-1;}
+}
+function qtyReason(mode,newq){
+  const p=S.at;let sum=0,cost=0;
+  for(let i=0;i<6;i++){const n=newq[i];if(!n)continue;sum+=n;
+    if(mode==='buy'){cost+=n*price(p,i);if(n>S.stock[p][i])return 'Only '+S.stock[p][i]+' '+GOODS[i][0]+' in stock.';}
+    else if(n>S.hold[i])return 'You only have '+S.hold[i]+' '+GOODS[i][0]+'.';}
+  if(mode==='buy'){if(cost>S.gold)return 'Not enough gold, Captain.';if(sum+holdTotal()>CAP)return 'The hold is full ('+CAP+' units).';}
+  return null;
+}
+function bump(mode,i,d){
+  const nq=q.slice();nq[i]=Math.max(0,nq[i]+d);if(nq[i]===q[i])return;
+  const r=qtyReason(mode,nq);if(r){say(r);return;}q=nq;
+}
+function deal(mode){
+  const p=S.at,n=q.reduce((a,b)=>a+b,0);if(!n){say('Choose how many first.');return;}
+  const r=qtyReason(mode,q);if(r){say(r);return;}
+  let total=0,profit=0;
+  for(let i=0;i<6;i++){const k=q[i];if(!k)continue;
+    if(mode==='buy'){const pr=price(p,i);S.avg[i]=(S.avg[i]*S.hold[i]+pr*k)/(S.hold[i]+k);S.hold[i]+=k;S.stock[p][i]-=k;S.gold-=pr*k;total+=pr*k;}
+    else{const pr=sellPrice(p,i);profit+=(pr-S.avg[i])*k;S.hold[i]-=k;S.stock[p][i]+=k;S.gold+=pr*k;total+=pr*k;if(S.hold[i]===0)S.avg[i]=0;}
+  }
+  if(mode==='sell'&&profit>0)S.fame+=Math.floor(profit/25);
+  q=[0,0,0,0,0,0];act(10);save();
+  say(mode==='buy'?'A fine purchase! That is '+total+' gold.':'Pleasure doing business! You earned '+total+' gold.');
+  checkBroke();
+}
+function checkBroke(){
+  if(S.gold<2&&holdTotal()===0&&!ev){ev={text:'You have no gold and no cargo. Your voyage ends here.',btn:'New Voyage',fn:()=>{ev=null;try{localStorage.removeItem(SAVEKEY);}catch(e){}newGame();}};}
+}
+function startSail(){
+  const d=daysTo(S.at,selDest);if(S.sup<d){say('Not enough provisions for '+d+' days.');scene='port';selDest=-1;return;}
+  sail={from:S.at,to:selDest,days:d,d:0,t:0};S.min=6*60;scene='sail';selDest=-1;
+}
+function arrive(){
+  S.at=sail.to;S.min=9*60+Math.floor(Math.random()*180);scene='port';menuSel=0;q=[0,0,0,0,0,0];
+  say('Welcome to '+PORTS[S.at].n+', Captain! How may I help you?');sail=null;save();checkBroke();
+}
+function rollEvent(){
+  const r=Math.random();
+  if(r<.07){const idx=[];S.hold.forEach((h,i)=>{if(h>0)idx.push(i)});
+    if(idx.length){const i=idx[Math.floor(Math.random()*idx.length)],lose=Math.max(1,Math.floor(S.hold[i]*(.1+Math.random()*.15)));S.hold[i]-=lose;if(!S.hold[i])S.avg[i]=0;
+      ev={text:'A storm hits! '+lose+' '+GOODS[i][0]+' washed overboard.',btn:'OK',fn:()=>{ev=null;}};}
+    else ev={text:'A storm hits, but the empty hold rides it out.',btn:'OK',fn:()=>{ev=null;}};
+  }else if(r<.12){const lose=Math.floor(S.gold*(.1+Math.random()*.15));S.gold-=lose;
+    ev={text:'Pirates raid the ship! You lose '+lose+' gold.',btn:'OK',fn:()=>{ev=null;checkBroke();}};
+  }else if(r<.16&&sail.d<sail.days-1){sail.days--;
+    ev={text:'A favorable wind! The voyage is one day shorter.',btn:'OK',fn:()=>{ev=null;}};}
+}
+
+// ===== Gambar tiap layar =====
+function sidePanels(){
+  const p=PORTS[S.at];
+  box(0,0,48,30,6);T(dateStr(),24,5,15,1);Ts(yearStr(),24,18,15,1);
+  waves(0,32,48,64,tNow);
+  R(2,98,44,14,15);T(clockStr(),24,102,7,1);
+  box(0,116,48,84,6);
+  T('Fame',24,122,4,1);T(S.fame,24,133,15,1);
+  T('Gold',24,148,4,1);T(S.gold,24,159,15,1);
+  T('Food',24,174,4,1);T(S.sup+' d',24,185,S.sup<3?8:15,1);
+  box(244,0,76,34,6);T(p.n,282,6,15,1);Ts(p.r,282,20,4,1);
+  box(244,36,76,100,6);
+  for(let i=0;i<MENU.length;i++)btn(249,42+i*16,66,13,MENU[i],()=>menuAct(i),{sel:menuSel===i,flat:true});
+  box(244,138,76,30,6);T('Price Idx',282,143,15,1);T(pindex(S.at)+'%',282,154,15,1);
+  R(244,168,76,32,2);compass(282,184);
+}
+function backdrop(){
+  R(48,0,196,200,15);
+  for(let y=66,r=0;y<200;y+=26,r++)for(let x=50+(r%2)*20;x<242;x+=40)galleon(x,y,2,1,1,1,1,1,1);
+}
+function topScene(){
+  const p=PORTS[S.at];
+  portrait(52,4,p,say_n<say_s.length&&((tNow*10)|0)%2);
+  box(118,4,124,58,6);
+  const lines=wrap(say_s.substr(0,Math.floor(say_n)),108);
+  lines.slice(0,5).forEach((l,i)=>T(l,124,10+i*10,15));
+}
+function listScene(mode){
+  const px=52,py=66,p=S.at;
+  box(px,py,188,128,6);
+  T(mode==='buy'?'Buy':'Sell',px+6,py+5,8);
+  T('Cost',px+44,py+5,4);T('Own',px+72,py+5,4);if(mode==='buy')T('Stk',px+98,py+5,4);T('Qty',px+120,py+5,4);
+  for(let i=0;i<6;i++){
+    const y=py+19+i*13;
+    T(GOODS[i][0],px+6,y,15);T(mode==='buy'?price(p,i):sellPrice(p,i),px+44,y,15);T(S.hold[i],px+74,y,15);
+    if(mode==='buy')T(S.stock[p][i],px+98,y,15);
+    T(q[i],px+122,y,q[i]?8:15);
+    btn(px+134,y-2,12,11,'-',()=>bump(mode,i,-1),{});
+    btn(px+147,y-2,12,11,'+',()=>bump(mode,i,1),{});
+    btn(px+160,y-2,23,11,'+10',()=>bump(mode,i,10),{});
+  }
+  let tot=0;for(let i=0;i<6;i++)tot+=q[i]*(mode==='buy'?price(p,i):sellPrice(p,i));
+  T((mode==='buy'?'Cost: ':'Gain: ')+tot,px+8,py+98,15);
+  T('Hold '+holdTotal()+'/'+CAP,px+120,py+98,15);
+  btn(px+8,py+110,50,13,mode==='buy'?'Buy':'Sell',()=>deal(mode),{});
+  btn(px+64,py+110,50,13,'Back',()=>{scene='port';q=[0,0,0,0,0,0];say('How may I help you?');},{});
+}
+function provScene(){
+  const px=52,py=66;box(px,py,188,128,6);
+  T('Provisions',px+8,py+6,15);
+  T('Price: '+SUPPRICE+' gold per day',px+8,py+24,15);
+  T('Now: '+S.sup+' days (max '+SUPCAP+')',px+8,py+38,15);
+  T('Gold: '+S.gold,px+8,py+52,15);
+  [1,5,10].forEach((n,i)=>btn(px+8+i*58,py+70,52,13,'Buy '+n,()=>{
+    if(S.sup+n>SUPCAP){say('The ship cannot carry that many provisions.');return;}
+    if(S.gold<n*SUPPRICE){say('Not enough gold, Captain.');return;}
+    S.gold-=n*SUPPRICE;S.sup+=n;act(10);save();say('Provisions loaded: '+n+' days.');checkBroke();},{}));
+  btn(px+8,py+92,50,13,'Back',()=>{scene='port';say('How may I help you?');},{});
+}
+function marketScene(){
+  const px=52,py=66,p=S.at;box(px,py,188,128,6);
+  T('Market Rate',px+6,py+5,8);
+  T('Buy',px+60,py+20,4);T('Sell',px+96,py+20,4);T('Stk',px+134,py+20,4);T('Now',px+160,py+20,4);
+  for(let i=0;i<6;i++){
+    const y=py+32+i*13,base=GOODS[i][1]*PORTS[p].m[i],pr=price(p,i),tr=pr/base;
+    T(GOODS[i][0],px+8,y,15);T(pr,px+60,y,15);T(sellPrice(p,i),px+96,y,15);T(S.stock[p][i],px+134,y,15);
+    T(tr>1.05?'high':tr<.95?'low':'fair',px+160,y,tr>1.05?8:tr<.95?10:15);
+  }
+  btn(px+8,py+110,50,13,'Back',()=>{scene='port';say('How may I help you?');},{});
+}
+function mapScene(live){
+  if(!mapCv)buildMap();g.drawImage(mapCv,0,0);
+  // garis rute
+  if(live&&sail){const a=PORTS[sail.from],b=PORTS[sail.to];const n=Math.floor(dist(sail.from,sail.to)/4);for(let i=0;i<=n;i++)R(a.x+(b.x-a.x)*i/n,a.y+(b.y-a.y)*i/n,1,1,7);}
+  if(!live&&selDest>=0){const a=PORTS[S.at],b=PORTS[selDest];const n=Math.floor(dist(S.at,selDest)/4);for(let i=0;i<=n;i++)R(a.x+(b.x-a.x)*i/n,a.y+(b.y-a.y)*i/n,1,1,7);}
+  PORTS.forEach((p,i)=>{
+    R(p.x-3,p.y-3,7,7,15);R(p.x-2,p.y-2,5,5,i===S.at?8:selDest===i?5:7);
+    const lw=tw(p.n,'s')+2,lx=Math.min(W-lw-1,Math.max(1,p.x+p.lab[0])),ly=p.y+p.lab[1];
+    R(lx-1,ly-1,lw+2,10,15);Ts(p.n,lx+1,ly,7);
+    if(!live)hits.push({x:p.x-8,y:p.y-8,w:16,h:16,fn:()=>{if(i!==S.at)selDest=i;}});
+  });
+  if(live&&sail){
+    const pr=(sail.d+sail.t/0.45)/sail.days,a=PORTS[sail.from],b=PORTS[sail.to];
+    const x=a.x+(b.x-a.x)*pr,y=a.y+(b.y-a.y)*pr;
+    R(x-10,y+8,20,2,3);galleon(Math.round(x-12),Math.round(y-10),7,13,15,4,15,5,8);
+    box(70,162,180,34,6);T(dateStr()+', '+yearStr(),160,169,15,1);
+    T('To '+PORTS[sail.to].n+': '+Math.max(0,sail.days-sail.d)+' days left',160,181,15,1);
+  }
+  if(!live){
+    btn(4,4,40,13,'Back',()=>{scene='port';selDest=-1;say('How may I help you?');},{});
+    if(selDest<0){box(70,4,180,26,6);T('Choose a destination',160,9,15,1);T('Tap a port on the map',160,19,4,1);}
+    if(selDest>=0){
+      const d=daysTo(S.at,selDest),ok=S.sup>=d;
+      box(60,4,200,46,6);
+      T(PORTS[S.at].n+' -> '+PORTS[selDest].n,160,9,15,1);
+      T(d+' days, food needed '+d+' (have '+S.sup+')',160,20,ok?15:8,1);
+      btn(90,33,60,13,'Set Sail',startSail,{off:!ok});
+      btn(170,33,60,13,'Cancel',()=>{selDest=-1;},{});
+    }
+  }
+}
+function evBox(){
+  box(50,70,220,58,6);
+  wrap(ev.text,200).forEach((l,i)=>T(l,160,78+i*10,15,1));
+  btn(120,108,80,14,ev.btn||'OK',ev.fn,{});
+}
+function titleScene(){
+  R(0,0,W,H,15);
+  for(let y=4,r=0;y<H;y+=26,r++)for(let x=(r%2)*20;x<W;x+=40)galleon(x,y,2,1,1,1,1,1,1);
+  box(40,40,240,70,6);
+  T('PELAYARAN DAGANG',160,52,8,1,2);
+  T('A pixel trading voyage',160,78,15,1);
+  T('London, 1522 A.D.',160,90,4,1);
+  btn(100,124,120,16,'New Voyage',()=>{try{localStorage.removeItem(SAVEKEY);}catch(e){}newGame();},{});
+  if(hasSave)btn(100,146,120,16,'Continue',()=>{const o=load();if(o){S=o;q=[0,0,0,0,0,0];scene='port';menuSel=0;say('Welcome back, Captain!');}},{});
+}
+
+// ===== Loop =====
+let last=performance.now();
+function frame(now){
+  const dt=Math.min(.1,(now-last)/1000);last=now;tNow+=dt;hits=[];
+  say_n=Math.min(say_s.length,say_n+dt*60);
+  if(scene==='sail'&&sail&&!ev){
+    sail.t+=dt;
+    if(sail.t>=.45){sail.t-=.45;sail.d++;S.day++;S.sup--;S.min=6*60;dayTick();
+      if(S.sup<0){S.sup=0;}
+      if(sail.d>=sail.days)arrive();else rollEvent();}
+  }
+  if(scene==='title')titleScene();
+  else if(scene==='map')mapScene(false);
+  else if(scene==='sail')mapScene(true);
+  else{
+    backdrop();sidePanels();topScene();
+    if(scene==='buy'||scene==='sell')listScene(scene);
+    else if(scene==='prov')provScene();
+    else if(scene==='market')marketScene();
+  }
+  if(ev)evBox();
+  requestAnimationFrame(frame);
+}
+hasSave=!!load();
+window.sim={get S(){return S;},get scene(){return scene;},menuAct:menuAct,newGame:newGame,sail:()=>sail,set evNull(v){ev=null;}};
+requestAnimationFrame(frame);
+</script></body></html>
