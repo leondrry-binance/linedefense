@@ -11,10 +11,17 @@ canvas{image-rendering:pixelated;image-rendering:crisp-edges;touch-action:manipu
 <script>
 'use strict';
 // ===== Layar 320x200, palet 16 warna ala EGA, diperbesar tanpa blur =====
-const W=320,H=200,cv=document.getElementById('c'),g=cv.getContext('2d');
-g.setTransform(2,0,0,2,0,0);g.imageSmoothingEnabled=false;
-function fit(){const s=Math.min(innerWidth/640,innerHeight/400);const k=s>=1?Math.floor(s*2)/2:s;cv.style.width=(640*k)+'px';cv.style.height=(400*k)+'px';}
-addEventListener('resize',fit);fit();
+let W=320,H=200,PORT=false,TOP=12,KS=2;const cv=document.getElementById('c'),g=cv.getContext('2d');
+// Layout otomatis: landscape 320x200 (PC), portrait 200xH (HP tegak)
+function layout(){
+  const iw=innerWidth||640,ih=innerHeight||400,dpr=window.devicePixelRatio||1;let cw,ch;
+  if(ih>iw*1.1){PORT=true;W=200;H=Math.max(340,Math.min(460,Math.round(W*ih/iw)));TOP=30;KS=Math.max(2,Math.min(6,Math.round(iw*dpr/W)));cw=iw;ch=iw*H/W;if(ch>ih){ch=ih;cw=ih*W/H;}}
+  else{PORT=false;W=320;H=200;TOP=12;KS=2;const s=Math.min(iw/640,ih/400);const k=s>=1?Math.floor(s*2)/2:s;cw=640*k;ch=400*k;}
+  const bw=W*KS,bh=H*KS;if(cv.width!==bw||cv.height!==bh){cv.width=bw;cv.height=bh;}
+  cv.style.width=cw+'px';cv.style.height=ch+'px';
+  g.setTransform(KS,0,0,KS,0,0);g.imageSmoothingEnabled=false;
+}
+addEventListener('resize',layout);addEventListener('orientationchange',layout);layout();
 const P=['#000000','#1b2a8a','#2f6fd8','#7fb3ff','#8a4b1c','#d89a4a','#f3d9a0','#ffffff','#b02a2a','#e86a3a','#3c8a3c','#a8d870','#555555','#aaaaaa','#7a3fa0','#2a1a10'];
 const hexrgb=h=>[parseInt(h.substr(1,2),16),parseInt(h.substr(3,2),16),parseInt(h.substr(5,2),16)];
 function R(x,y,w,h,c){g.fillStyle=P[c];g.fillRect(Math.round(x),Math.round(y),Math.round(w),Math.round(h));}
@@ -51,7 +58,7 @@ const rnd=n=>Math.floor(Math.random()*n),pick=a=>a[rnd(a.length)];
 function shuf(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=rnd(i+1);[a[i],a[j]]=[a[j],a[i]];}return a;}
 function rp(n){n=Math.round(n);if(n>=1e6)return 'Rp '+(n/1e6).toFixed(1).replace('.0','').replace('.',',')+'jt';if(n>=1000)return 'Rp '+(Math.round(n/100)/10).toString().replace('.',',')+'rb';return 'Rp '+n;}
 function clk(m){m=Math.floor(m);const h=Math.floor(m/60)%24,mm=m%60;return (h<10?'0':'')+h+':'+(mm<10?'0':'')+mm;}
-let YO=12,OFS=0;const L=(x,y,w,h,c)=>R(x,YO+y,w,h,c);
+let YO=TOP,OFS=0;const L=(x,y,w,h,c)=>R(x,YO+y,w,h,c);
 
 // ===== Data =====
 const LOC=[
@@ -437,14 +444,17 @@ function bgOf(a){
   if(a.k==='shopin')return JOBS[a.j].id==='kopi'?[6,4]:[13,12];
   return BGX[a.k]||[6,4];
 }
+const ARTPAN={dealer:110,mart:70,warteg:100,umkm:110,shopin:80,fc:70,samsat:100};
 function drawArt(a,ah){
-  OFS=ah>=150?16:0;YO=12+OFS;
-  g.save();g.beginPath();g.rect(0,12,W,ah);g.clip();
-  const bg=bgOf(a);R(0,12,W,OFS,bg[0]);R(0,12+OFS+100,W,ah-OFS-100,bg[1]);
+  OFS=ah>=130?16:0;YO=TOP+OFS;
+  g.save();g.beginPath();g.rect(0,TOP,W,ah);g.clip();
+  const bg=bgOf(a);R(0,TOP,W,OFS,bg[0]);R(0,TOP+OFS+100,W,ah-OFS-100,bg[1]);
+  if(PORT){g.save();g.translate(-(ARTPAN[a.k]===undefined?60:ARTPAN[a.k]),0);}
   (ARTS[a.k]||artHome)(a);
+  if(PORT)g.restore();
   const h=S?Math.floor(S.min/60):12;
-  if((h<5||h>=18)&&a.k!=='night'&&a.k!=='win'&&a.k!=='lose'){g.globalAlpha=.38;R(0,12,W,ah,0);g.globalAlpha=1;}
-  g.restore();YO=12;OFS=0;
+  if((h<5||h>=18)&&a.k!=='night'&&a.k!=='win'&&a.k!=='lose'){g.globalAlpha=.38;R(0,TOP,W,ah,0);g.globalAlpha=1;}
+  g.restore();YO=TOP;OFS=0;
 }
 
 // ===== UI =====
@@ -458,6 +468,7 @@ function cbtn(x,y,w,h,label,fn,o){
   hits.push({x:x,y:y,w:w,h:h,fn:fn,off:o.off});
 }
 function topbar(){
+  if(PORT)return topbarP();
   LOC[0].n=S.house?'Rumah Sendiri':'Rumah Kos';
   R(0,0,W,12,15);Ts('Hari '+S.day+' '+clk(S.min),4,2,6);
   Ts(S.sick>0?LOC[S.at].n.slice(0,7):LOC[S.at].n,70,2,13);
@@ -468,6 +479,7 @@ function topbar(){
   if(S.sick>0)Ts('SAKIT',114,2,8);
 }
 function drawSay(){
+  if(PORT)return drawSayP();
   const c=cur;topbar();drawArt(c.art,H-12);
   const lines=[];String(c.text).split('\n').forEach(s=>wrap(s,300,'b').forEach(l=>lines.push(l)));
   const ops=c.opts,n=ops.length;
@@ -481,6 +493,7 @@ function drawSay(){
   else ops.forEach((o,i)=>cbtn(i%2?164:6,y0+((i/2)|0)*step,150,12,o.l,()=>{if(!o.off)o.f();},{off:o.off,dim:o.dim}));
 }
 function titleScene(){
+  if(PORT)return titleP();
   R(0,0,W,H,1);for(let i=0;i<36;i++)R((i*53)%320,(i*37)%90,1,1,7);R(262,12,14,14,6);R(267,12,10,12,1);
   for(let i=0,x=-4;x<320;i++){const w=32+((i*13)%22),h=34+((i*17)%34);R(x,100-h,w,h,i%2?12:15);for(let wy=100-h+5;wy<96;wy+=9)for(let wx=x+4;wx<x+w-4;wx+=9)if(((wx+wy+i)%3)!==0)R(wx,wy,3,4,9);x+=w+2;}
   R(0,100,W,100,15);R(0,100,W,2,13);for(let x=-((tNow*30)%32);x<320;x+=32)R(Math.round(x),128,18,2,6);
@@ -498,6 +511,7 @@ function titleScene(){
 
 let lifeBg='smk';
 function lifeScene(){
+  if(PORT)return lifeP();
   R(0,0,W,H,1);for(let i=0;i<30;i++)R((i*53)%320,(i*37)%200,1,1,7);
   T('PILIH TINGKAT HIDUPMU',160,6,6,1);
   ['easy','normal','hard','random'].forEach((k,i)=>{
@@ -508,6 +522,7 @@ function lifeScene(){
   cbtn(4,176,60,20,'Kembali',()=>{scene='title';},{});
 }
 function mapScene(){
+  if(PORT)return mapP();
   topbar();R(0,12,W,138,10);
   for(let i=0;i<40;i++)R((i*47)%320,16+(i*29)%130,2,2,11);
   [56,96,136].forEach(y=>{R(0,y,W,5,12);for(let x=0;x<W;x+=14)R(x,y+2,7,1,13);});
@@ -542,7 +557,7 @@ function mapScene(){
     cbtn(204,185,60,13,'Batal',()=>{selDest=-1;},{});
   }
 }
-function drawTrip(){topbar();drawArt({k:'trip',t:Math.min(1.5,trip.t),mode:trip.mode},H-12);
+function drawTrip(){if(PORT)return tripP();topbar();drawArt({k:'trip',t:Math.min(1.5,trip.t),mode:trip.mode},H-12);
   g.globalAlpha=.94;R(0,H-34,W,34,15);R(2,H-32,W-4,30,6);g.globalAlpha=1;R(0,H-34,W,2,9);
   T(trip.mode==='mobil'?'Berangkat naik mobil, AC menyala...':trip.mode==='motor'?'Berangkat naik motor...':'Naik angkot, duduk berdesakan...',8,H-29,15,0);T('Menuju '+LOC[trip.to].n,8,H-16,12,0);}
 
@@ -829,9 +844,136 @@ function applyJob(i){
   show({k:'home'},'Lamaran ke '+j.name+' terkirim. Biasanya dibalas 1-2 hari lewat email.',[{l:'Kembali',f:jobList}]);
 }
 
+
+// ===== Tampilan portrait (HP tegak) =====
+function topbarP(){
+  LOC[0].n=S.house?'Rumah Sendiri':'Rumah Kos';
+  R(0,0,W,TOP,15);
+  Ts('Hari '+S.day+' '+clk(S.min),4,3,6);Ts(rp(S.money),W-4,3,11,2);
+  Ts(LOC[S.at].n,4,12,13);if(S.sick>0)Ts('SAKIT',W-4,12,8,2);
+  const k=100-(S.hunger||0),p=S.stress||0;
+  const bar=(x,lab,v,c)=>{Ts(lab,x,21,7);R(x+7,21,52,6,12);R(x+8,22,Math.max(0,Math.round(50*v/100)),4,c);};
+  bar(3,'E',S.energy,S.energy>30?10:8);bar(69,'K',k,k>40?10:k>20?9:8);bar(135,'P',p,p<40?10:p<70?9:8);
+}
+function drawSayP(){
+  const c=cur;topbar();
+  const lines=[];String(c.text).split('\n').forEach(s=>wrap(s,W-12,'b').forEach(l=>lines.push(l)));
+  const ops=c.opts,n=ops.length;
+  let bh=ops.some(o=>tw(o.l,'b')>W-18)?19:16;
+  const th=lines.length*10+10;
+  if(th+n*(bh+2)+8>H-TOP-130)bh=13;
+  const step=bh+2,need=th+n*step+8;
+  const ah=Math.max(130,Math.min(220,H-TOP-need)),py=TOP+ah;
+  drawArt(c.art,ah);
+  R(0,py,W,H-py,15);R(2,py+2,W-4,H-py-4,6);R(0,py,W,2,9);
+  lines.forEach((l,i)=>T(l,6,py+6+i*10,15,0));
+  const y0=py+th+2;
+  ops.forEach((o,i)=>cbtn(6,y0+i*step,W-12,bh,o.l,()=>{if(!o.off)o.f();},{off:o.off,dim:o.dim}));
+}
+function titleP(){
+  R(0,0,W,H,1);for(let i=0;i<34;i++)R((i*53)%W,(i*37)%(H*.4|0),1,1,7);R(160,36,14,14,6);R(165,36,10,12,1);
+  const hb=Math.round(H*.42);
+  for(let i=0,x=-4;x<W;i++){const w=26+((i*13)%18),h=30+((i*17)%34);R(x,hb-h,w,h,i%2?12:15);for(let wy=hb-h+5;wy<hb-4;wy+=9)for(let wx=x+4;wx<x+w-4;wx+=8)if(((wx+wy+i)%3)!==0)R(wx,wy,3,4,9);x+=w+2;}
+  R(0,hb,W,H-hb,15);R(0,hb,W,2,13);for(let x=-((tNow*30)%32);x<W;x+=32)R(Math.round(x),hb+22,18,2,6);
+  box(8,16,184,66,6);T('JOB SEEKING',100,24,8,1,2);
+  wrap('Level 1: Dari lamaran sampai diterima',168,'b').forEach((l,i)=>T(l,100,50+i*11,15,1));
+  const mx=((tNow*40)%260)-30,bx=Math.round(mx),by=hb+6;
+  R(bx,by+7,5,5,0);R(bx+14,by+7,5,5,0);R(bx+4,by+4,11,4,9);R(bx+13,by+1,1,4,12);R(bx+3,by+2,6,2,15);R(bx+6,by-13,8,6,5);R(bx+6,by-8,8,6,7);R(bx+7,by-14,6,3,15);
+  const y=hb+40;T('Pilih latar belakangmu:',100,y,7,1);
+  cbtn(10,y+16,180,28,'Lulusan SMK',()=>{lifeBg='smk';scene='life';},{});
+  cbtn(10,y+50,180,28,'Fresh Graduate S1',()=>{lifeBg='s1';scene='life';},{});
+  if(hasSave)cbtn(10,y+84,180,28,'Lanjutkan',()=>{const o=load();if(o){S=o;homeMenu('Selamat datang kembali. Lanjut cari kerja!');}},{});
+}
+function lifeP(){
+  R(0,0,W,H,1);for(let i=0;i<30;i++)R((i*53)%W,(i*37)%H,1,1,7);
+  T('PILIH TINGKAT HIDUPMU',100,6,6,1);
+  const bh=Math.min(88,Math.floor((H-24-34)/4));
+  ['easy','normal','hard','random'].forEach((k,i)=>{
+    const y=20+i*bh;box(4,y,192,bh-4,6);
+    cbtn(8,y+4,184,22,LIFE[k].n,()=>newGame(lifeBg,k),{bg:k==='easy'?11:k==='normal'?7:k==='hard'?9:13});
+    wrap(LIFE[k].d,180,'s').slice(0,4).forEach((l,j)=>Ts(l,9,y+30+j*8,15,0));
+  });
+  cbtn(4,H-24,70,20,'Kembali',()=>{scene='title';},{});
+}
+const MAPP=[[.2,.93],[.22,.31],[.3,.81],[.25,.06],[.5,.18],[.72,.68],[.75,.06],[.78,.31],[.5,.43],[.78,.55],[.25,.55],[.74,.81]];
+function mapP(){
+  topbar();
+  const sel=selDest>=0&&selDest!==S.at;
+  const info=[],btns=[];
+  if(sel){
+    const tm=baseMin(S.at,selDest);
+    if(S.car){info.push('Mobil: ~'+tm+' mnt, bensin Rp 15rb, AC, hemat energi.','Motor Rp 5rb | Angkot 1-2 jam Rp 8rb.');
+      btns.push(['Mobil',()=>startTrip(selDest,'mobil'),S.money<15000],[S.motor?'Motor':'Disita',()=>startTrip(selDest,'motor'),!S.motor||S.money<5000],['Angkot',()=>startTrip(selDest,'angkot'),S.money<8000]);}
+    else{info.push('Motor: ~'+tm+' mnt, Rp 5rb, bisa macet/razia.','Angkot: 1-2 jam, Rp 8rb, lebih aman tapi capek.');
+      btns.push([S.motor?'Naik motor':'Motor disita',()=>startTrip(selDest,'motor'),!S.motor||S.money<5000],['Naik angkot',()=>startTrip(selDest,'angkot'),S.money<8000]);}
+    btns.push(['Batal',()=>{selDest=-1;},false]);
+  }else{
+    info.push('Pilih tujuan di peta. Kamu di: '+LOC[S.at].n+'.');btns.push(['Kembali',()=>{selDest=-1;hereMenu();},false]);
+  }
+  const il=[];info.forEach(t=>wrap(t,W-12,'s').forEach(l=>il.push(l)));
+  const rows=Math.ceil(btns.length/2),pH=(sel?14:4)+il.length*8+rows*19+8,my=TOP,mh=H-TOP-pH;
+  R(0,my,W,mh,10);for(let i=0;i<40;i++)R((i*47)%W,my+(i*29)%mh,2,2,11);
+  [.12,.25,.37,.5,.62,.75,.87].forEach(f=>{const y=my+Math.round(f*mh);R(0,y,W,5,12);for(let x=0;x<W;x+=14)R(x,y+2,7,1,13);});
+  [W*.12,W*.5,W*.86].forEach(x=>{R(Math.round(x),my,5,mh,12);for(let y=my;y<my+mh;y+=14)R(Math.round(x)+2,y,1,7,13);});
+  LOC.forEach((l,i)=>{
+    const f=MAPP[i]||[.5,.5],lx0=Math.round(8+f[0]*(W-16)),ly0=Math.round(my+20+f[1]*(mh-44));
+    const sl=i===selDest,here=i===S.at;
+    if(sl)R(lx0-9,ly0-9,18,18,8);
+    R(lx0-7,ly0-7,14,14,15);
+    const k=l.k==='home'?[5,8]:l.k==='fc'?[3,2]:l.k==='samsat'?[6,10]:l.k==='dealer'?[9,7]:l.k==='mart'?(l.brand==='alfamart'?[8,7]:[2,9]):l.k==='warteg'?[10,9]:JOBS[l.j].tier===2?[2,1]:JOBS[l.j].tier===1?[13,12]:[9,7];
+    R(lx0-6,ly0-6,12,12,k[0]);R(lx0-6,ly0-6,12,4,k[1]);
+    if(here){R(lx0-3,ly0-16,6,5,7);R(lx0-1,ly0-11,2,3,7);}
+    const t2=tw(l.n,'s'),lx=Math.max(2,Math.min(W-t2-2,lx0-t2/2|0));
+    R(lx-1,ly0+8,t2+2,9,15);Ts(l.n,lx,ly0+9,here?6:7);
+    hits.push({x:lx0-12,y:ly0-12,w:24,h:30,fn:()=>{selDest=i;}});
+  });
+  const py=H-pH;box(0,py,W,pH,6);
+  if(sel)T('Ke: '+LOC[selDest].n,6,py+4,15,0);
+  il.forEach((l,i)=>Ts(l,6,py+(sel?16:6)+i*8,12,0));
+  const by=py+(sel?14:4)+il.length*8+3,bw=btns.length===1?W-12:(W-18)/2;
+  btns.forEach((b,i)=>cbtn(6+(i%2)*(bw+6),by+((i/2)|0)*19,btns.length===1?W-12:(i===btns.length-1&&btns.length%2===1?W-12:bw),17,b[0],b[1],{off:b[2]}));
+}
+function cvP(){
+  topbar();R(0,TOP,W,H-TOP,13);
+  const dx=(W-148)/2-6,dy=TOP+2-16;
+  g.save();g.translate(dx,dy);
+  R(6,16,148,156,15);R(8,18,144,152,7);
+  T('RIAN PRATAMA',50,21,15,0);Ts(S.edu===2?'Lulusan S1':'Lulusan SMK',50,30,12,0);
+  CV_SLOTS.forEach(sl=>{
+    const se=cvSel===sl.k,v=cvDraft[sl.k];
+    R(sl.x-1,sl.y-1,sl.w+2,sl.h+2,se?8:12);R(sl.x,sl.y,sl.w,sl.h,v===undefined?13:6);
+    if(v===undefined)Ts(sl.n,sl.x+sl.w/2,sl.y+(sl.h-8>>1),12,1);
+    else if(sl.k==='foto'){const id=CV_CHIPS.foto[v].id,cx=sl.x+sl.w/2-8;R(cx,sl.y+5,16,16,5);R(cx,sl.y+5,16,5,15);R(cx+4,sl.y+13,2,2,0);R(cx+10,sl.y+13,2,2,0);
+      R(cx-6,sl.y+24,28,18,id==='f'?7:id==='k'?9:14);if(id==='f')R(cx+6,sl.y+24,4,16,8);if(id==='s'){R(cx,sl.y+2,3,4,14);R(cx+13,sl.y+2,3,4,14);}}
+    else{const ch=CV_CHIPS[sl.k][v],ls=wrap(ch.t,sl.w-4,'s');ls.slice(0,3).forEach((l,i)=>Ts(l,sl.x+2,sl.y+2+i*8,15,0));}
+    hits.push({x:sl.x+dx,y:sl.y+dy,w:sl.w,h:sl.h,fn:()=>{cvSel=sl.k;}});
+  });
+  g.restore();
+  const cs=CV_SLOTS.find(s=>s.k===cvSel);let y=TOP+162;
+  box(2,y-2,W-4,H-y-26,6);Ts('Pilih isi: '+cs.n,8,y+3,15,0);y+=13;
+  const nch=CV_CHIPS[cvSel].length,cst=Math.max(18,Math.min(34,Math.floor((H-30-y)/nch)));
+  CV_CHIPS[cvSel].forEach((ch,i)=>{
+    const off=ch.req&&!S.hasFoto;
+    cbtn(6,y+i*cst,W-12,cst-1,ch.t+(off?' (butuh foto studio)':''),()=>{cvDraft[cvSel]=i;const nx=CV_SLOTS.find(s=>cvDraft[s.k]===undefined);if(nx)cvSel=nx.k;},{off:off,bg:cvDraft[cvSel]===i?11:7});
+  });
+  const n=CV_SLOTS.filter(s=>cvDraft[s.k]!==undefined).length;
+  cbtn(4,H-24,120,20,n<6?'Lengkapi '+n+'/6':'Simpan CV',()=>{
+    S.cv={slots:Object.assign({},cvDraft),score:cvScore(cvDraft),skills:cvSkills(cvDraft)};
+    homeMenu('CV tersimpan. Cetak di fotokopi supaya siap dibawa interview.');
+  },{off:n<6});
+  cbtn(128,H-24,68,20,'Batal',()=>homeMenu(),{});
+}
+function tripP(){
+  topbar();const ah=H-TOP-44;drawArt({k:'trip',t:Math.min(1.5,trip.t),mode:trip.mode},ah);
+  const py=H-44;g.globalAlpha=.94;R(0,py,W,44,15);R(2,py+2,W-4,40,6);g.globalAlpha=1;R(0,py,W,2,9);
+  const tx=trip.mode==='mobil'?'Berangkat naik mobil, AC menyala...':trip.mode==='motor'?'Berangkat naik motor...':'Naik angkot, duduk berdesakan...';
+  wrap(tx,W-12,'b').forEach((l,i)=>T(l,6,py+6+i*10,15,0));T('Menuju '+LOC[trip.to].n,6,py+28,12,0);
+}
+
 // ===== CV =====
 function cvOpen(){cvDraft=S.cv?Object.assign({},S.cv.slots):{};cvSel='foto';scene='cv';}
 function cvScene(){
+  if(PORT)return cvP();
   topbar();R(0,12,W,188,13);R(6,16,148,156,15);R(8,18,144,152,7);
   T('RIAN PRATAMA',50,21,15,0);Ts(S.edu===2?'Lulusan S1':'Lulusan SMK',50,30,12,0);
   CV_SLOTS.forEach(sl=>{
@@ -1248,7 +1390,7 @@ function updFight(dt){
   else if(S.energy<=0){f.over=true;f.won=false;}
 }
 function drawFight(){
-  const f=fight;if(!f)return;topbar();
+  const f=fight;if(!f)return;if(PORT)return fightP(f);topbar();
   if(f.bg==='gate')drawArt({k:'bld',j:f.j},H-12);
   else{R(0,12,W,188,6);R(0,142,W,58,4);R(0,140,W,3,15);R(84,20,152,124,15);R(90,26,140,116,13);}
   const o=f.who==='satpam'?{shirt:1,cap:1,hair:15,badge:1}:f.who==='dc'?{shirt:0,hair:0,cap:0,glasses:1}:{hair:13,shirt:10};
@@ -1268,6 +1410,29 @@ function drawFight(){
     cbtn(6,178,92,20,'Pukul kiri',()=>fPunch('l'),{});
     cbtn(114,178,92,20,'Tangkis',()=>fGuard(),{});
     cbtn(222,178,92,20,'Pukul kanan',()=>fPunch('r'),{});
+  }
+}
+
+function fightP(f){
+  topbar();const bz=H-50,ah=bz-TOP,gy=Math.round(ah*.68);
+  if(f.bg==='gate')drawArt({k:'bld',j:f.j},ah);
+  else{R(0,TOP,W,ah,6);R(0,TOP+gy,W,ah-gy,4);R(0,TOP+gy-2,W,3,15);R(24,TOP+8,152,gy-12,15);R(30,TOP+14,140,gy-24,13);}
+  const o=f.who==='satpam'?{shirt:1,cap:1,hair:15,badge:1}:f.who==='dc'?{shirt:0,hair:0,cap:0,glasses:1}:{hair:13,shirt:10};
+  const sw=f.hit>0?Math.sin(tNow*90)*5:Math.sin(tNow*3)*3,cx=W/2+sw+(f.state==='stagger'?-14:0),oy=TOP-12;
+  bust(cx,16,o,2.3);
+  if(f.state==='wind'){const k=Math.min(1,f.t/f.windT),sz=8+k*64;R(cx+34-sz/2-k*30,oy+96-sz/2+k*34,sz,sz,5);R(cx+34-sz/2-k*30,oy+96-sz/2+k*34+sz*.7,sz,sz*.3,f.who==='dc'?0:9);Ts('!',cx+40,oy+40,8,1);}
+  g.globalAlpha=.85;R(4,TOP+3,W-8,9,15);g.globalAlpha=1;R(6,TOP+5,W-12,5,12);R(6,TOP+5,Math.max(0,(W-12)*f.hp/f.max),5,8);
+  Ts((f.who==='satpam'?'SATPAM':f.who==='dc'?'DEBT COLLECTOR':'TETANGGA'),8,TOP+14,7,0);
+  g.globalAlpha=.8;R(10,bz-62,W-20,11,15);g.globalAlpha=1;Ts(f.msg,W/2,bz-60,6,1);
+  const base=bz-40,glove=(x,y)=>{R(x,y,46,46,8);R(x+4,y+4,38,10,9);R(x,y+38,46,8,7);R(x,y,46,2,15);};
+  if(f.guard>0){glove(W/2-50,base-30);glove(W/2+4,base-30);}
+  else{glove(8,f.pl>0?base-50:base);glove(W-54,f.pr>0?base-50:base);}
+  if(f.flash>0){g.globalAlpha=.4;R(0,TOP,W,H-TOP,8);g.globalAlpha=1;}
+  if(f.over){g.globalAlpha=.55;R(0,Math.round(H*.33),W,60,0);g.globalAlpha=1;T(f.won?'MENANG!':'KO...',W/2,Math.round(H*.33)+16,f.won?11:8,1,3);}
+  else{
+    cbtn(4,bz+4,60,42,'Pukul kiri',()=>fPunch('l'),{});
+    cbtn(70,bz+4,60,42,'Tangkis',()=>fGuard(),{});
+    cbtn(136,bz+4,60,42,'Pukul kanan',()=>fPunch('r'),{});
   }
 }
 
