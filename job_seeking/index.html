@@ -607,6 +607,7 @@ function seized(next){
 }
 function finishTrip(){
   const dur=(trip.mode==='angkot'||trip.mode==='jalan'?trip.adur:trip.base)+trip.extra;
+  S.commute={day:S.day,mode:trip.mode,extra:trip.extra};
   drain(trip.mode==='mobil'?1:trip.mode==='motor'?5:trip.mode==='jalan'?18:12);
   if(advance(dur))return;
   S.at=trip.to;arrived();
@@ -811,7 +812,7 @@ function nextDay(forced){
   for(const b of S.bills.slice())if(b.paid&&b.rec&&!b.renewed){b.renewed=true;if(b.left!==undefined&&b.left<=1)continue;S.bills.push(Object.assign(mkBill(b.k,b.base,b.due+b.rec),{rec:b.rec,base:b.base,left:b.left===undefined?undefined:b.left-1}));}
   const e0=S.energy;S.day++;S.min=450;let gain=S.hunger<40?100:S.hunger<70?60:S.hunger<85?30:10;if(S.sick>0)gain=Math.round(gain*.5);if(hLive())gain+=10;S.energy=Math.min(forced?55:100,S.energy+gain);S.hunger=Math.min(100,S.hunger+15);S.money-=S.daily;S.at=0;
   const news=[];
-  if(S.work){absentCheck(S.day-1,news);if(employed()&&S.day>=S.work.start&&isWD(S.day)){S.min=390;if(Math.random()<(forced?.35:.1)+(S.stress||0)/500){S.min+=30+rnd(60);news.push('Kamu kesiangan bangun.');}}}
+  if(S.work){absentCheck(S.day-1,news);S.wokeLate=false;if(employed()&&S.day>=S.work.start&&isWD(S.day)){S.min=390;if(Math.random()<(forced?.35:.1)+(S.stress||0)/500){S.min+=30+rnd(60);S.wokeLate=true;news.push('Kamu kesiangan bangun.');}}}
   for(const id in S.apps){
     const a=S.apps[id],job=JOBS.find(j=>j.id===id);
     if(a.st==='wait'&&S.day>=a.decide){
@@ -1259,26 +1260,70 @@ function workplace(j,t){
   ops.push({l:'Ke peta',f:()=>{scene='map';selDest=-1;}});
   show({k:'bld',j:j},txt,ops);
 }
+const LATE_POL=[{cutP:.5,tegur:3,sp:[6,10,14]},{cutP:1,tegur:3,sp:[5,8,11]},{cutP:1,tegur:2,sp:[4,7,10]}];
 function startWork(){
-  const w=S.work,job=wJob(),h=jobHrs(job),ds=w.sal/22;todayJob=job;
+  const w=S.work,job=wJob(),h=jobHrs(job);todayJob=job;
   if(S.min<h[0]&&advance(h[0]-S.min))return;
   w.doneDay=S.day;
-  const late=S.min-h[0];let fac=1,m;
+  const late=S.min-h[0];
   if(late<=10){
-    m='Kamu tiba tepat waktu ('+clk(S.min)+'). Absensi tercatat hijau.';w.onTimeD=(w.onTimeD||0)+1;
+    let m='Kamu tiba tepat waktu ('+clk(S.min)+'). '+(job.tier===0?'Pemilik mengangguk melihatmu sudah siap.':'Mesin absen mencatat jam masukmu hijau.');w.onTimeD=(w.onTimeD||0)+1;
     if(w.onTimeD%10===0){repAdd(1);m+=' Kedisiplinanmu mulai dilirik atasan.';}
-  }else{
-    fac=late>90?.5:.85;w.lateTot++;w.lateM++;
-    m='Kamu terlambat '+late+' menit ('+clk(S.min)+'). Gaji hari ini dipotong '+(late>90?'50%':'15%')+'.';
-    if(late>90)repAdd(-1);
-    if(w.lateM===3){repAdd(-1);m+=' Atasan menegurmu soal keterlambatan.';}
-    if(w.lateM===5||w.lateM===8||w.lateM===11){
-      w.sp++;repAdd(-1);m+=' HRD menerbitkan Surat Peringatan '+w.sp+'.';
-      if(w.sp>=3){w.accr+=ds*fac;return doFire([m],'Surat Peringatan ketiga membuatmu dipecat.');}
-    }
+    return beginDay(m,1);
   }
-  w.accr+=ds*fac;
+  lateExcuse(late);
+}
+function beginDay(m,fac){
+  const w=S.work,job=todayJob||wJob();
+  w.accr+=w.sal/22*fac;
   show({k:'room',who:job.tier===0?'owner':job.tier===1?'hrd':'dir'},m+'\nKamu duduk di meja kerjamu dan mulai bekerja.',[{l:'Kerja sampai istirahat siang',f:lunch}]);
+}
+const LIES=[['Ban motor bocor di tengah jalan','ban'],['Listrik padam jadi alarm tidak bunyi','listrik'],['Ada urusan keluarga mendadak','keluarga'],['Mengantar saudara ke rumah sakit','rs'],['Jalan ditutup karena ada kecelakaan','kecelakaan'],['Kunci motor hilang, lama dicari','kunci'],['Hujan deras, harus berteduh dulu','hujan']];
+function lateExcuse(late){
+  const w=S.work,job=todayJob,tier=job.tier,c=(S.commute&&S.commute.day===S.day)?S.commute:{};
+  const real=[];
+  if((c.extra||0)>=15)real.push(['Terjebak macet parah di jalan','macet',1]);
+  if(c.mode==='angkot')real.push(['Angkotnya ngetem dan jalan lambat sekali','angkot',1]);
+  if(S.wokeLate)real.push(['Kesiangan, alarm tidak terdengar','kesiangan',1]);
+  if(S.sick>0)real.push(['Badan tidak enak sejak pagi dan kepala pusing','sakit',1]);
+  const pr=shuf(real).slice(0,2),lies=shuf(LIES).slice(0,3-pr.length).map(x=>[x[0],x[1],0]);
+  const ops=shuf(pr.concat(lies)).map(e=>({l:e[0],f:()=>excuseResult(late,e)}));
+  ops.push({l:'Jujur: minta maaf, tanpa alasan',f:()=>excuseResult(late,['','maaf',1])});
+  const who=tier===0?'Pemilik':tier===1?'HRD/atasan':'Atasan dan mesin absen';
+  show({k:'room',who:tier===0?'owner':tier===1?'hrd':'dir'},'Kamu tiba jam '+clk(S.min)+', terlambat '+late+' menit. '+(tier===0?'Pemilik melirik jam dinding dan menatapmu.':'Mesin absen mencatat jam masukmu merah. '+(tier===2?'Atasan menunggu penjelasan.':'Atasan menunggu penjelasan.'))+'\n"'+(tier===0?'Kok telat, ada apa?':'Kenapa terlambat hari ini?')+'" Apa jawabanmu?',ops);
+}
+function excuseResult(late,e){
+  const w=S.work,tier=todayJob.tier,k=w.exc||(w.exc={}),type=e[1],truth=e[2]===1,rep=k[type]||0;
+  k[type]=rep+1;
+  let mode='normal',msg='';
+  if(type==='maaf'){msg='Kamu mengaku salah dan minta maaf. '+(tier===0?'Pemilik hanya menghela napas.':'Atasan mencatat dan berharap tidak terulang.');}
+  else if(truth){
+    const p=Math.max(.1,(tier===0?.75:tier===1?.5:.4)-.2*rep);
+    if(Math.random()<p){mode=tier===0?'waived':'half';msg='"'+e[0]+'." '+(tier===0?'Pemilik percaya dan menepuk bahumu.':'Atasan menerima alasan itu, tapi absen tetap tercatat.');}
+    else{msg='"'+e[0]+'." '+(rep>0?'"Alasan yang sama lagi?" Atasan tidak percaya.':'Atasan tidak menerima alasan itu begitu saja.');}
+  }else{
+    const caught=Math.random()<Math.min(.9,(tier===0?.35:.5)+.15*rep);
+    if(caught){mode='harsh';repAdd(-2);msg='"'+e[0]+'." Ternyata ceritamu tidak cocok dengan kenyataan dan ketahuan berbohong. Reputasimu turun.';}
+    else{mode=tier===0?'waived':'half';msg='"'+e[0]+'." Tidak ada yang curiga kali ini, tapi bohong seperti itu berisiko.';S.evil+=0;}
+  }
+  latePenalty(late,mode,msg);
+}
+function latePenalty(late,mode,pre){
+  const w=S.work,job=todayJob,tier=job.tier,pol=LATE_POL[tier],ds=w.sal/22;
+  w.lateTot++;w.lateM++;
+  let fac=late>90?.5:.85,m=pre+' ';
+  if(mode==='waived')fac=1;
+  else if(mode==='half')fac=late>90?.75:.93;
+  else if(mode==='harsh')fac=late>90?.4:.7;
+  else if(tier===0&&Math.random()>pol.cutP)fac=1;
+  if(fac<1)m+='Gaji hari ini dipotong '+Math.round((1-fac)*100)+'%.';else m+='Kali ini gajimu tidak dipotong.';
+  if(late>90)repAdd(-1);
+  if(w.lateM===pol.tegur){repAdd(-1);m+=' Kamu mendapat teguran karena sering terlambat.';}
+  if(pol.sp.includes(w.lateM)){
+    w.sp++;repAdd(-1);m+=' Surat Peringatan '+w.sp+' diterbitkan.';
+    if(w.sp>=3){w.accr+=ds*fac;return doFire([m],'Surat Peringatan ketiga membuatmu dipecat.');}
+  }
+  beginDay(m,fac);
 }
 function lunch(){
   const job=todayJob||wJob(),c=job.tier===0?10000:15000;
@@ -1525,6 +1570,93 @@ function applyOffers(){
   JOBS.forEach(j=>{const o=S.offers[j.id];if(o){j.pos=o.pos;j.sal=o.sal;j.thr=o.thr;}});
 }
 
+// ===== Bank pertanyaan tambahan & generator soal =====
+const Q3=(q,a,b,c)=>({q:q,o:[a,b,c]});
+BANK.hrd.push(
+ Q('Ceritakan satu kegagalan Anda dan pelajarannya.','Pernah salah input data, saya akui, perbaiki, dan sekarang selalu cek ulang.','Saya jarang gagal, Pak/Bu.','Gagal itu karena orang lain tidak membantu.'),
+ Q('Anda lebih suka bekerja sendiri atau dalam tim?','Keduanya bisa, tergantung kebutuhan tugas.','Dalam tim.','Sendiri, orang lain sering menghambat.'),
+ Q('Apa yang Anda lakukan kalau sedang jenuh bekerja?','Istirahat sebentar, atur ulang prioritas, lalu lanjut.','Pura-pura sibuk saja.','Pulang lebih awal.'),
+ Q3('Pernah dimarahi atasan? Bagaimana reaksi Anda?',['Dengarkan, minta maaf kalau salah, lalu perbaiki.',2],['Saya diam dan menahan kesal.',1],['Saya balas dengan nada tinggi.',0]),
+ Q3('Kalau diterima, apakah sanggup bekerja di bawah target?',['Siap, dengan catatan target jelas dan terukur.',2],['Siap, apa pun targetnya.',1],['Target membuat saya stres, saya kurang suka.',0]),
+ Q('Menurut Anda, apa arti disiplin kerja?','Datang tepat waktu dan menyelesaikan tugas sesuai tenggat.','Mengikuti aturan saja.','Yang penting hasil, jam masuk bebas.'),
+ Q('Kalau Anda terlambat karena macet, apa yang Anda lakukan?','Kabari atasan sejak di jalan dan berangkat lebih awal besoknya.','Langsung masuk tanpa bicara apa-apa.','Pura-pura sakit supaya tidak dimarahi.'),
+ Q3('Apa yang Anda ketahui tentang perusahaan ini?',['Bidang usaha, produk utama, dan posisi kami di pasar.',2],['Perusahaan ini cukup besar.',1],['Belum sempat cari tahu.',0]),
+ Q('Bagaimana Anda menangani tugas yang tidak Anda pahami?','Tanya rekan atau atasan, catat, lalu pelajari mandiri.','Dikerjakan sebisanya.','Menunggu ada yang menolong.'),
+ Q3('Bersediakah ditempatkan di bagian yang tidak sesuai jurusan?',['Bersedia, saya mau belajar hal baru.',2],['Bersedia, tapi saya lebih suka sesuai jurusan.',1],['Tidak, saya sudah sekolah untuk bidang lain.',0]),
+ Q('Mengapa kami harus memilih Anda?','Saya teliti, cepat belajar, dan siap berkontribusi sejak awal.','Karena saya butuh pekerjaan ini.','Karena pelamar lain pasti kurang bagus.'),
+ Q('Jika rekan kerja melakukan kesalahan, apa yang Anda lakukan?','Ingatkan secara pribadi, lalu bantu perbaiki.','Biarkan saja, bukan urusan saya.','Langsung laporkan ke atasan di depan semua orang.')
+);
+BANK.owner.push(
+ Q('Pembeli minta diskon besar padahal harga sudah pas. Bagaimana?','Jelaskan sopan harganya sudah pas, tawarkan bonus kecil kalau Bapak setuju.','Kasih saja supaya cepat laku.','Bilang tidak bisa, titik.'),
+ Q3('Kalau stok barang di rak kosong dan pemilik tidak ada?',['Cek gudang dulu, isi rak, dan kabari Bapak.',2],['Menunggu Bapak datang.',1],['Biarkan, pembeli bisa cari di tempat lain.',0]),
+ Q('Kamu pernah terlambat masuk kerja atau sekolah?','Pernah sesekali, tapi saya belajar berangkat lebih awal.','Tidak pernah sama sekali.','Sering, tapi tidak apa-apa kan?'),
+ Q3('Bisa bersih-bersih toko dan tata barang kalau sepi?',['Bisa, Pak. Lebih baik dipakai kerja daripada diam.',2],['Bisa kalau memang perlu.',1],['Itu bukan pekerjaan admin.',0]),
+ Q('Kalau uang kembalian kurang di kasir, bagaimana?','Hitung ulang, catat, dan laporkan jujur ke Bapak.','Ambil dari uang sendiri diam-diam.','Salahkan pembeli.'),
+ Q3('Kapan bisa mulai kerja?',['Besok juga bisa, Pak.',2],['Minggu depan.',1],['Bulan depan, saya urus dulu hal lain.',0]),
+ Q('Ada teman datang minta potongan harga rahasia.','Tolak halus, harga di sini sama untuk semua.','Kasih sedikit, sekali ini saja.','Kasih banyak, kan teman.'),
+ Q('Apa yang kamu lakukan kalau tidak ada pembeli?','Rapikan etalase dan cek stok, atau tanya Bapak apa yang bisa dibantu.','Main HP.','Tidur sebentar di pojok.')
+);
+BANK.dir.push(
+ Q('Menurut Anda, tantangan terbesar perusahaan seperti kami?','Persaingan dan perubahan pasar, sehingga butuh karyawan yang adaptif.','Saya belum tahu, Pak.','Gaji karyawan terlalu kecil.'),
+ Q3('Apa yang Anda lakukan jika target tim turun dua bulan berturut-turut?',['Analisis penyebab bersama tim dan ajukan perbaikan konkret.',2],['Bekerja lebih keras saja.',1],['Itu urusan atasan.',0]),
+ Q('Bagaimana Anda belajar hal baru dengan cepat?','Praktik langsung, minta umpan balik, dan evaluasi mingguan.','Menunggu pelatihan dari perusahaan.','Tidak terlalu cepat, tapi nanti terbiasa.'),
+ Q3('Anda dapat tawaran gaji lebih tinggi dari tempat lain saat sudah di sini?',['Saya diskusikan terbuka dulu, loyalitas tetap penting.',2],['Saya pertimbangkan dulu.',1],['Tentu saya pindah.',0]),
+ Q('Apa nilai kerja yang paling Anda pegang?','Integritas: jujur dalam laporan dan bertanggung jawab atas hasil.','Kerja keras.','Santai tapi selesai.'),
+ Q('Bagaimana jika Anda diminta mengerjakan hal yang melanggar aturan?','Menolak dengan sopan dan melapor sesuai prosedur.','Mengerjakan demi menyenangkan atasan.','Mengerjakan asal tidak ketahuan.')
+);
+BANK.admin.push(
+ Q('Anda menerima dokumen rahasia salah kirim.','Beritahu pengirim, hapus salinan, dan jangan menyebarkan.','Baca dulu isinya.','Teruskan ke grup supaya semua tahu.'),
+ Q3('Cara terbaik menyimpan surat masuk?',['Dicatat di buku agenda lalu diarsipkan per tanggal.',2],['Disimpan di laci.',1],['Ditaruh di meja saja.',0]),
+ Q('Atasan minta data penjualan tapi file ada di rekan yang cuti.','Hubungi rekan atau cari cadangan di server, dan kabari atasan.','Tunggu rekan kembali.','Karang angka perkiraan.'),
+ Q('Format laporan berubah mendadak.','Tanya detail format barunya dan sesuaikan.','Pakai format lama saja.','Protes dulu.')
+);
+BANK.ops.push(
+ Q('Barang datang rusak dari pemasok.','Foto bukti, tolak penerimaan, dan laporkan agar diganti.','Terima saja daripada ribut.','Buang tanpa lapor.'),
+ Q3('Dua kurir tiba bersamaan saat gudang sibuk.',['Atur antrean bongkar muat dan catat tiap penerimaan.',2],['Layani satu per satu tanpa catatan.',1],['Suruh mereka menunggu lama.',0]),
+ Q('Truk terlambat dan jadwal kirim terancam.','Kabari pelanggan, atur ulang rute, dan cari opsi cepat.','Menunggu saja.','Salahkan sopir.')
+);
+BANK.mkt.push(
+ Q('Pelanggan lama mulai pindah ke kompetitor.','Hubungi, tanyakan alasan, dan tawarkan solusi yang sesuai.','Biarkan, nanti cari pelanggan baru.','Marah-marah ke pelanggan.'),
+ Q3('Cara menjaring calon pelanggan baru?',['Kombinasi referensi, media sosial, dan kunjungan langsung.',2],['Sebar brosur.',1],['Menunggu telepon masuk.',0]),
+ Q('Promosi pesaing lebih murah dari kita.','Tonjolkan kelebihan layanan dan nilai, bukan ikut banting harga.','Banting harga lebih rendah lagi.','Sebar kabar buruk soal pesaing.')
+);
+function fmtRp(n){return 'Rp '+n.toString().replace(/\B(?=(\d{3})+(?!\d))/g,'.');}
+function uniq3(a,b,c){const s=new Set([a]);const o=[b,c];for(let i=0;i<2;i++){while(s.has(o[i])||o[i]<=0)o[i]+=7+i;s.add(o[i]);}return [a,o[0],o[1]];}
+function qSeq(){
+  const t=rnd(4);let arr,a;
+  if(t===0){const s=2+rnd(8),d=2+rnd(7);arr=[0,1,2,3].map(i=>s+d*i);a=s+d*4;}
+  else if(t===1){const s=1+rnd(4);arr=[s,s*2,s*4,s*8];a=s*16;}
+  else if(t===2){const n=2+rnd(5);arr=[0,1,2,3].map(i=>(n+i)*(n+i));a=(n+4)*(n+4);}
+  else{const s=20+rnd(30),d=3+rnd(5);arr=[0,1,2,3].map(i=>s-d*i);a=s-d*4;}
+  const x=uniq3(a,a+1+rnd(3),a-1-rnd(3));
+  return Q('Deret angka: '+arr.join(', ')+', ... Angka berikutnya?',String(x[0]),String(x[1]),String(x[2]));
+}
+function qLetter(){
+  const st=rnd(6),d=1+rnd(3),L=i=>String.fromCharCode(65+st+d*i);
+  const a=L(4),nx=(st+d*4+1<26)?String.fromCharCode(65+st+d*4+1):'Z',pv=(st+d*4-1>=0)?String.fromCharCode(65+st+d*4-1):'A';
+  const o=[a,nx,pv];
+  return Q('Huruf berikutnya: '+[0,1,2,3].map(L).join(', ')+', ...',o[0],o[1]===o[0]?'Y':o[1],o[2]===o[0]||o[2]===o[1]?'X':o[2]);
+}
+function qDisc(){
+  const X=[80000,120000,150000,200000,250000,400000][rnd(6)],P=[10,20,25,50][rnd(4)];
+  const a=X*(100-P)/100,x=uniq3(a,X*P/100===a?a+5000:X*P/100,X*(100+P)/100);
+  return Q('Barang Rp '+X.toLocaleString('id-ID')+' didiskon '+P+'%. Berapa harga akhirnya?',fmtRp(x[0]),fmtRp(x[1]),fmtRp(x[2]));
+}
+function qTime(){
+  const h=6+rnd(3),m=[0,15,30,45][rnd(4)],d=[35,50,75,95,120][rnd(5)],st=h*60+m,en=st+d;
+  const x=uniq3(en,en+15,en-20);
+  return Q('Anda berangkat pukul '+clk(st)+' dan perjalanan memakan '+d+' menit. Pukul berapa tiba?',clk(x[0]),clk(x[1]),clk(x[2]));
+}
+function qSum(){
+  const a=15000+rnd(30)*1000,b=22000+rnd(40)*1000,c=8000+rnd(20)*1000,t=a+b+c,x=uniq3(t,t+10000,t-5000);
+  return Q('Tiga nota: '+fmtRp(a)+', '+fmtRp(b)+', dan '+fmtRp(c)+'. Berapa totalnya?',fmtRp(x[0]),fmtRp(x[1]),fmtRp(x[2]));
+}
+BANK.psiko.push(qSeq,qSeq,qLetter,qDisc,qTime,
+ Q('Anda diminta menyelesaikan dua tugas sekaligus yang sama pentingnya.','Bicarakan dengan atasan mana yang didahulukan dan beri estimasi waktu.','Kerjakan bergantian tanpa bilang siapa-siapa.','Kerjakan yang membuat atasan lebih senang.'),
+ Q3('Anda merasa tertekan menjelang tenggat. Apa yang dilakukan?',['Pecah tugas jadi bagian kecil dan minta bantuan bila perlu.',2],['Lembur sendirian sampai selesai.',1],['Mengeluh kepada rekan-rekan.',0]));
+BANK.admin.push(qSum,qSum,qDisc);
+BANK.ops.push(qTime,qSum);
+
 // ===== Kantor =====
 function jobMenu(j,t){
   if(isMyWork(j))return workplace(j,t);
@@ -1631,7 +1763,7 @@ function runStage(){
   if(st.k==='admin')return adminCheck();
   if(st.k==='user'&&st.div&&!iv.div)return pickDiv();
   const key=st.k==='user'?(iv.div||'admin'):st.k;
-  iv.qs=shuf(BANK[key]).slice(0,st.n);iv.qi=0;iv.score=0;iv.react='';
+  iv.qs=shuf(BANK[key]).slice(0,st.n).map(q=>typeof q==='function'?q():q);iv.qi=0;iv.score=0;iv.react='';
   show({k:'room',who:WHO[st.k]},'Tahap '+(iv.si)+'/'+(iv.job.stages.length-1)+'. '+INTRO[st.k],[{l:'Mulai',f:askQ}],{ah:62});
 }
 function adminCheck(){
