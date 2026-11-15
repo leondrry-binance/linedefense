@@ -15,7 +15,7 @@ let W=320,H=200,PORT=false,TOP=12,KS=2;const cv=document.getElementById('c'),g=c
 // Layout otomatis: landscape 320x200 (PC), portrait 200xH (HP tegak)
 function layout(){
   const iw=innerWidth||640,ih=innerHeight||400,dpr=window.devicePixelRatio||1;let cw,ch;
-  if(ih>iw*1.1){PORT=true;W=200;H=Math.max(340,Math.min(460,Math.round(W*ih/iw)));TOP=30;KS=Math.max(2,Math.min(6,Math.round(iw*dpr/W)));cw=iw;ch=iw*H/W;if(ch>ih){ch=ih;cw=ih*W/H;}}
+  if(ih>iw*1.1){PORT=true;W=200;H=Math.max(340,Math.min(460,Math.round(W*ih/iw)));TOP=38;KS=Math.max(2,Math.min(6,Math.round(iw*dpr/W)));cw=iw;ch=iw*H/W;if(ch>ih){ch=ih;cw=ih*W/H;}}
   else{PORT=false;W=320;H=200;TOP=12;KS=2;const s=Math.min(iw/640,ih/400);const k=s>=1?Math.floor(s*2)/2:s;cw=640*k;ch=400*k;}
   const bw=W*KS,bh=H*KS;if(cv.width!==bw||cv.height!==bh){cv.width=bw;cv.height=bh;}
   cv.style.width=cw+'px';cv.style.height=ch+'px';
@@ -258,9 +258,24 @@ function handlebar(){
   L(140,78,40,18,0);L(142,80,36,14,15);L(159,84,2,8,8);L(146,92,28,1,6);
 }
 function artTrip(p){
-  roadView(p.mode==='motor'||p.mode==='mobil'?7:4);
+  roadView(p.mode==='motor'||p.mode==='mobil'?7:p.mode==='jalan'?1.5:4);
   if(p.mode==='mobil'){rearCar(.3,-.5,13);rearCar(.5,.55,2);L(0,72,320,28,15);L(0,70,320,3,13);L(120,62,80,3,13);L(142,78,36,16,13);L(150,82,20,8,15);L(156,70,8,6,12);}
   else if(p.mode==='motor'){rearCar(.3,-.5,13);rearCar(.5,.55,2);handlebar();}
+  else if(p.mode==='jalan'){
+    const t=tNow,s=Math.sin(t*6.5),bob=Math.abs(s)*2.2;
+    for(let i=0;i<3;i++){const x=Math.round(((i*130-(t*38)%130)+130)%390-40);const hh=24+i*5;L(x,38-hh,3,hh,12);L(x-9,38-hh,21,3,12);L(x-10,38-hh-2,23,2,7);L(x+34,40-18,14,18,11);L(x+36,40-24,10,8,10);L(x+39,40-10,3,10,4);}
+    g.save();g.translate(0,-bob);
+    L(0,72,320,28,12);L(0,70,320,3,13);L(0,72,320,2,7);
+    for(let k=0;k<5;k++){const y=74+((k*6+t*22)%26);L(0,Math.round(y),320,1,13);}
+    for(let k=0;k<8;k++){const x=Math.round(((k*48-(t*10)%48)+48)%336-8);L(x,74,1,26,13);}
+    g.restore();
+    const lx=s>0?1:0;
+    // kaki bergantian di depan kamera
+    L(118,96-(lx?6:0)-bob*.5,26,14,15);L(118,96-(lx?6:0)-bob*.5,26,4,5);L(121,100-(lx?6:0)-bob*.5,20,3,6);
+    L(176,96-(lx?0:6)-bob*.5,26,14,15);L(176,96-(lx?0:6)-bob*.5,26,4,5);L(179,100-(lx?0:6)-bob*.5,20,3,6);
+    L(116,84-(lx?6:0)-bob*.5,30,10,4);L(174,84-(lx?0:6)-bob*.5,30,10,4);
+    if(((t*3)|0)%4===0)Ts('hh...',160,YO+60,7,1);
+  }
   else{L(0,0,320,8,10);L(0,0,10,100,10);L(310,0,10,100,10);L(0,70,320,4,12);L(60,60,30,40,15);L(62,56,26,16,5);L(60,72,30,28,6);L(220,62,30,38,15);L(222,58,26,16,4);L(220,74,30,26,8);L(0,96,320,4,4);}
 }
 function artMacet(){
@@ -476,7 +491,7 @@ function topbar(){
   Ts(rp(S.money),150,2,11);
   Ts('E',192,2,7);R(199,3,38,6,12);R(200,4,Math.max(0,Math.round(36*S.energy/100)),4,S.energy>30?10:8);
   const k=100-(S.hunger||0);Ts('K',244,2,7);R(251,3,38,6,12);R(252,4,Math.max(0,Math.round(36*k/100)),4,k>40?10:k>20?9:8);
-  const p=S.stress||0;Ts('P',294,2,7);R(300,3,16,6,12);R(301,4,Math.round(14*p/100),4,p<40?10:p<70?9:8);
+  const p=S.stress||0;Ts('S',294,2,7);R(300,3,16,6,12);R(301,4,Math.round(14*p/100),4,p<40?10:p<70?9:8);
   if(S.sick>0)Ts('SAKIT',118,2,8);
 }
 function drawSay(){
@@ -607,7 +622,7 @@ function seized(next){
 }
 function finishTrip(){
   const dur=(trip.mode==='angkot'||trip.mode==='jalan'?trip.adur:trip.base)+trip.extra;
-  S.commute={day:S.day,mode:trip.mode,extra:trip.extra};
+  S.commute={day:S.day,mode:trip.mode,extra:trip.extra};S.outToday=true;
   drain(trip.mode==='mobil'?1:trip.mode==='motor'?5:trip.mode==='jalan'?18:12);
   if(advance(dur))return;
   S.at=trip.to;arrived();
@@ -631,7 +646,7 @@ function homeMenu(t){
   if(w&&w.biz&&w.bizD!==S.day)ops.push({l:'Jalankan usaha hari ini',off:S.energy<30||S.min>14*60,f:bizDay});
   ops.push({l:S.cv?'Ubah CV':'Buat CV',f:cvOpen},{l:'Cari lowongan',f:jobList},{l:'Cek email'+(S.unread?' ('+S.unread+')':''),f:inbox},
     {l:'Urusan lain'+(nb?' ('+nb+')':''),f:()=>moreMenu()},{l:'Tidur',f:sleep},{l:'Keluar rumah',f:()=>{scene='map';selDest=-1;}});
-  show({k:'home'},t||((hLive()?'Rumah cicilanmu, kecil tapi milikmu sendiri.':'Kamar kos kecilmu.')+(w?workHint():' Laptop menyala, kopi sachet sudah dingin. Waktunya cari kerja.')+(nb?' Tagihan belum lunas: '+nb+'.':'')+(S.hunger>=60?' Perutmu keroncongan.':'')+(S.sick>0?' Kamu sedang '+S.sickK+'.':'')),ops);
+  show({k:'home'},t||((hLive()?'Rumah cicilanmu, kecil tapi milikmu sendiri.':'Kamar kos kecilmu.')+(w?workHint():' Laptop menyala, kopi sachet sudah dingin. Waktunya cari kerja.')+(nb?' Tagihan belum lunas: '+nb+'.':'')+(S.hunger>=60?' Perutmu keroncongan.':'')+(S.sick>0?' Kamu sedang '+S.sickK+'. Istirahat di rumah seharian, tanpa keluar, membuat sembuh lebih cepat.':'')),ops);
 }
 function moreMenu(t){
   const nb=openBills().length;
@@ -810,7 +825,7 @@ function tickBills(news){
 }
 function nextDay(forced){
   for(const b of S.bills.slice())if(b.paid&&b.rec&&!b.renewed){b.renewed=true;if(b.left!==undefined&&b.left<=1)continue;S.bills.push(Object.assign(mkBill(b.k,b.base,b.due+b.rec),{rec:b.rec,base:b.base,left:b.left===undefined?undefined:b.left-1}));}
-  const e0=S.energy;S.day++;S.min=450;let gain=S.hunger<40?100:S.hunger<70?60:S.hunger<85?30:10;if(S.sick>0)gain=Math.round(gain*.5);if(hLive())gain+=10;S.energy=Math.min(forced?55:100,S.energy+gain);S.hunger=Math.min(100,S.hunger+15);S.money-=S.daily;S.at=0;
+  const e0=S.energy;S.day++;S.min=450;let gain=S.hunger<40?100:S.hunger<70?60:S.hunger<85?30:10;if(S.sick>0)gain=Math.round(gain*(S.outToday||forced?.5:.8));if(hLive())gain+=10;S.energy=Math.min(forced?55:100,S.energy+gain);S.hunger=Math.min(100,S.hunger+15);S.money-=S.daily;S.at=0;
   const news=[];
   if(S.work){absentCheck(S.day-1,news);S.wokeLate=false;if(employed()&&S.day>=S.work.start&&isWD(S.day)){S.min=390;if(Math.random()<(forced?.35:.1)+(S.stress||0)/500){S.min+=30+rnd(60);S.wokeLate=true;news.push('Kamu kesiangan bangun.');}}}
   for(const id in S.apps){
@@ -835,7 +850,8 @@ function nextDay(forced){
   const od=S.bills.filter(b=>!b.paid&&b.late>0).length;
   S.stress=Math.min(100,Math.round((S.stress||0)*(hLive()?.6:.7)+od*8+(S.hunger>=70?5:0)+(S.sick>0?5:0)+(S.sAdd||0)));S.sAdd=0;
   if(S.stress>=60)news.push('Pikiranmu penuh, semua terasa berat dan cepat melelahkan.');
-  if(S.sick>0){S.sick--;if(S.sick<=0){S.sickK=null;news.push('Badanmu sudah pulih dari sakit.');}else news.push('Kamu masih '+S.sickK+'. Sisa sekitar '+S.sick+' hari, energi pulih lebih lambat.');}
+  const rested=!S.outToday&&!forced;S.outToday=false;
+  if(S.sick>0){S.sick-=rested?2:1;if(S.sick<=0){S.sick=0;S.sickK=null;news.push(rested?'Seharian istirahat di rumah, badanmu sudah pulih dari sakit.':'Badanmu sudah pulih dari sakit.');}else news.push('Kamu masih '+S.sickK+'. Sisa sekitar '+S.sick+' hari. '+(rested?'Istirahat penuh di rumah membuatmu sembuh lebih cepat.':'Kalau keluar rumah terus, sembuhnya lebih lambat dan energi pulih setengah.'));}
   else if((e0<=10&&Math.random()<.6)||(e0<=25&&Math.random()<.2+S.stress/300)){S.sick=3+rnd(3);S.sickK=['flu','demam','batuk-batuk'][rnd(3)];news.push('Karena terlalu lelah, kamu jatuh sakit: '+S.sickK+'. Beli obat di minimarket atau istirahat.');}
   const msg='Hari ke-'+S.day+'. Biaya hidup hari ini '+rp(S.daily)+'.'+(news.length?'\n'+news.join(' '):'');
   const cb=pickCollector();
@@ -882,8 +898,8 @@ function topbarP(){
   Ts((S.work?'Hari '+S.day+' '+WDN[wday(S.day)]:'Hari '+S.day)+' '+clk(S.min),4,3,6);Ts(rp(S.money),W-4,3,11,2);
   Ts(LOC[S.at].n,4,12,13);if(S.sick>0)Ts('SAKIT',W-4,12,8,2);
   const k=100-(S.hunger||0),p=S.stress||0;
-  const bar=(x,lab,v,c)=>{Ts(lab,x,21,7);R(x+7,21,52,6,12);R(x+8,22,Math.max(0,Math.round(50*v/100)),4,c);};
-  bar(3,'E',S.energy,S.energy>30?10:8);bar(69,'K',k,k>40?10:k>20?9:8);bar(135,'P',p,p<40?10:p<70?9:8);
+  const bar=(x,lab,v,c)=>{Ts(lab,x,21,7);R(x,29,62,6,12);R(x+1,30,Math.max(0,Math.round(60*v/100)),4,c);};
+  bar(3,'ENERGI',S.energy,S.energy>30?10:8);bar(69,'KENYANG',k,k>40?10:k>20?9:8);bar(135,'STRES',p,p<40?10:p<70?9:8);
 }
 function drawSayP(){
   const c=cur;topbar();
