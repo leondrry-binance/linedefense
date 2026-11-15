@@ -614,7 +614,24 @@ function policeStop(next){
   const fine=(S.sim?0:150000)+(S.stnk?0:100000);
   show({k:'tilang'},'"Permisi, Mas. Surat-suratnya mana?" Kamu tidak punya '+miss.join(' & ')+'.\nDenda tilang: '+rp(fine)+'.',[
     {l:'Bayar denda '+rp(fine),f:()=>{if(S.money>=fine){S.money-=fine;trip.extra+=20;next();}else seized(next);}},
-    {l:'Aku tidak punya uang...',f:()=>seized(next)}]);
+    {l:'Aku tidak punya uang...',f:()=>seized(next)}].concat(trip.mode==='motor'&&S.motor?[{l:'Kabur, tancap gas!',f:()=>kabur(fine,next)}]:[]));
+}
+function kabur(fine,next){
+  const r=Math.random(),st=S.stress||0;S.stress=Math.min(100,st+10);S.evil=(S.evil||0)+1;
+  if(r<.5){
+    trip.extra+=10;
+    return show({k:'macet'},'Kamu menarik gas dan menyelip di antara mobil, lalu belok ke gang sempit. Polisi kehilangan jejakmu. Jantungmu masih berdebar.',[{l:'Lanjut',f:next}]);
+  }
+  if(r<.8){
+    const f2=fine*2;
+    return show({k:'tilang'},'Kamu kabur, tapi polisi menyusul dan memotong jalanmu. "Sudah salah, malah kabur!" Denda jadi '+rp(f2)+'.',[
+      {l:'Bayar denda '+rp(f2),f:()=>{if(S.money>=f2){S.money-=f2;trip.extra+=30;next();}else seized(next);}},
+      {l:'Aku tidak punya uang...',f:()=>seized(next)}]);
+  }
+  const cost=Math.min(S.money,150000);S.money-=cost;S.energy=Math.max(0,S.energy-15);
+  if(!(S.sick>0)){S.sick=3;S.sickK='luka lecet';}
+  trip.extra+=40;
+  show({k:'macet'},'Kamu kabur terlalu kencang di tikungan dan motormu tergelincir. Badanmu lecet, motor penyok. Biaya berobat dan bengkel '+rp(cost)+'. Polisi tidak mengejar, tapi perjalananmu terhambat lama.',[{l:'Lanjut',f:next}]);
 }
 function seized(next){
   S.motor=false;trip.mode='angkot';
