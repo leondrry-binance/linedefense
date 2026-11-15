@@ -329,7 +329,31 @@ function artLose(){
   L(0,0,320,100,12);L(40,10,240,60,15);L(44,14,232,52,3);for(let i=0;i<60;i++){const x=44+(i*29)%232,y=14+((i*17+tNow*80)%52)|0;L(x,y,1,4,7);}
   g.globalAlpha=.4;L(44,14,232,52,12);g.globalAlpha=1;L(0,78,320,22,15);
 }
-const ARTS={home:artHome,road:artRoad,trip:artTrip,macet:artMacet,tilang:artTilang,fc:artFc,samsat:artSamsat,bld:artBld,gate:artGate,lobby:artLobby,room:artRoom,night:artNight,win:artWin,lose:artLose};
+function artShopIn(p){
+  const job=JOBS[p.j],kopi=job.id==='kopi';
+  L(0,0,320,100,kopi?6:13);L(0,64,320,36,kopi?4:12);for(let x=0;x<320;x+=20)L(x,64,1,36,15);
+  if(kopi){
+    L(20,8,100,40,0);L(24,12,92,32,15);for(let i=0;i<5;i++){L(30,16+i*6,50,1,7);L(90,16+i*6,18,1,6);}
+    L(230,14,60,34,13);L(236,20,24,18,12);L(266,22,18,10,8);L(240,46,40,4,5);
+    L(130,6,60,12,4);T(job.short,160,12+8,6,1);
+    bust(150,20,{shirt:4,hair:15,badge:1,talk:1},1.6);
+    L(60,66,200,34,5);L(56,64,208,4,6);L(70,74,60,16,3);L(72,76,56,2,7);L(200,56,16,10,7);L(220,60,10,6,6);L(244,62,12,4,9);
+  }else{
+    L(20,10,110,3,4);L(20,32,110,3,4);L(20,54,110,3,4);
+    for(let i=0;i<5;i++){L(24+i*20,0+13-3+3,16,10,[8,2,10,9,14][i]);L(24+i*20,35-10,16,10,[9,10,2,8,7][i]);L(24+i*20,57-10,16,10,[2,8,9,14,10][i]);}
+    L(150,6,100,14,15);T(job.short,200,12+9,6,1);
+    L(260,18,50,40,7);L(264,22,42,16,3);L(270,44,30,3,12);
+    bust(190,22,{shirt:9,hair:0,talk:1},1.6);
+    L(70,66,220,34,4);L(66,64,228,4,5);L(220,56,30,10,12);L(224,52,22,6,3);L(100,58,26,8,7);L(130,60,18,6,6);
+  }
+}
+function artWc(){
+  L(0,0,320,100,7);for(let x=0;x<320;x+=16)L(x,0,1,88,13);for(let y=0;y<88;y+=16)L(0,y,320,1,13);
+  L(0,88,320,12,12);L(96,8,128,62,13);L(100,12,120,54,3);
+  clipRect(100,12,120,54,()=>bust(160,16,{shirt:7,hair:15,tie:8},1.4));
+  L(92,70,136,8,7);L(92,78,136,3,13);L(156,62,8,8,12);L(10,20,40,66,6);L(14,24,32,58,4);L(40,52,3,3,6);
+}
+const ARTS={wc:artWc,shopin:artShopIn,home:artHome,road:artRoad,trip:artTrip,macet:artMacet,tilang:artTilang,fc:artFc,samsat:artSamsat,bld:artBld,gate:artGate,lobby:artLobby,room:artRoom,night:artNight,win:artWin,lose:artLose};
 function drawArt(a,ah){
   g.save();g.beginPath();g.rect(0,12,W,ah);g.clip();
   (ARTS[a.k]||artHome)(a);
@@ -504,14 +528,14 @@ function nextDay(forced){
 function inbox(){
   S.unread=0;const ls=[];
   for(const id in S.apps){const a=S.apps[id],job=JOBS.find(j=>j.id===id);
-    ls.push(job.name+': '+(a.st==='wait'?'menunggu balasan':a.st==='invite'?'UNDANGAN hari ke-'+a.invDay+', jam '+clk(a.invMin):'tidak lolos'));}
+    ls.push(job.name+': '+(a.st==='ban'?'daftar hitam':a.st==='wait'?'menunggu balasan':a.st==='invite'?'UNDANGAN hari ke-'+a.invDay+', jam '+clk(a.invMin):'tidak lolos'));}
   show({k:'home'},ls.length?'Kotak masuk:\n'+ls.join('\n'):'Belum ada lamaran yang dikirim.',[{l:'Kembali',f:()=>homeMenu()}]);
 }
 function jobList(){
   const ops=JOBS.map((j,i)=>({l:j.name,f:()=>jobInfo(i)}));ops.push({l:'Kembali',f:()=>homeMenu()});
   show({k:'home'},'Lowongan tersedia. Makin besar perusahaannya, makin panjang dan sulit seleksinya.',ops);
 }
-function stText(job){const a=S.apps[job.id];if(!a)return 'belum melamar';return a.st==='wait'?'menunggu balasan':a.st==='invite'?'diundang hari ke-'+a.invDay:'ditolak (coba lagi nanti)';}
+function stText(job){const a=S.apps[job.id];if(!a)return 'belum melamar';return a.st==='ban'?'masuk daftar hitam':a.st==='wait'?'menunggu balasan':a.st==='invite'?'diundang hari ke-'+a.invDay:'ditolak (coba lagi nanti)';}
 function jobInfo(i){
   const j=JOBS[i];
   show({k:'home'},j.name+' - '+j.pos+'\nGaji '+rp(j.sal)+' | Syarat: '+(j.edu===2?'S1':j.edu===1?'SMK/S1':'semua lulusan')+' | Berkas '+j.sets+' set\n'+TIERTXT[j.tier]+'\nStatus: '+stText(j),[
@@ -592,9 +616,10 @@ function jobMenu(j,t){
 function gate(j){
   const job=JOBS[j],a=S.apps[job.id];
   if(job.tier===0){
-    return show({k:'bld',j:j},'Pemilik menyapa dari dalam: "Cari siapa, Mas? Mau melamar kerja?"',[
+    return show({k:'shopin',j:j},'Kamu melangkah masuk. Pemilik menyapa dari balik meja: "Cari siapa, Mas? Mau melamar kerja?"',[
       {l:'Ya, saya antar lamaran',f:()=>startIv(j,false)},{l:'Tidak jadi, permisi',f:()=>jobMenu(j)}]);
   }
+  if(a&&a.st==='ban')return show({k:'gate',j:j},'Satpam mengenalimu: "Bapak yang waktu itu... Maaf, Anda tidak boleh masuk."',[{l:'Pamit',f:()=>jobMenu(j)}]);
   const ops=[];let txt='Satpam: "Selamat datang. Ada keperluan apa, Pak?"';
   if(a&&a.st==='invite'){
     if(a.invDay===S.day)ops.push({l:'Ada jadwal interview jam '+clk(a.invMin),f:()=>lobbyIn(j)});
@@ -605,8 +630,43 @@ function gate(j){
     S.sets--;S.apps[job.id]={st:'wait',decide:S.day+2,pass:(S.cv.score+(S.edu===2?2:1)+rnd(2)-1)>=job.thr};
     show({k:'gate',j:j},'Satpam menerima berkasmu: "Nanti kami hubungi lewat email."',[{l:'Kembali',f:()=>jobMenu(j)}]);
   }});
+  ops.push({l:'Pura-pura numpang ke WC',f:()=>tryWC(j)});
+  ops.push({l:'Menyelinap masuk',f:()=>trySneak(j)});
   ops.push({l:'Pamit',f:()=>jobMenu(j)});
   show({k:'gate',j:j},txt,ops);
+}
+
+// ===== Cara nekat: pura-pura ke WC / menyelinap =====
+function tryWC(j){
+  const job=JOBS[j];if(advance(5))return;
+  if(Math.random()>=(job.tier===2?.45:.6)){
+    if(advance(10))return;
+    return show({k:'gate',j:j},'Satpam menahanmu: "Maaf, Mas. WC khusus karyawan dan tamu. Pakai WC umum di luar ya." Kamu diusir dengan sopan.',[{l:'Kembali',f:()=>gate(j)}]);
+  }
+  show({k:'wc'},'Satpam ragu sebentar, lalu menunjuk lorong: "Lurus, belok kiri." Kamu masuk. Di cermin kamu merapikan kemeja dan rambut, lalu menarik napas.',[{l:'Keluar menuju lobi',f:()=>wcLobby(j)}]);
+}
+function wcLobby(j){
+  const job=JOBS[j];
+  show({k:'lobby',j:j},'Kamu berdiri di lobi gedung. Resepsionis sibuk menerima telepon. Lift dan tangga menuju lantai HRD ada di belakangnya.',[
+    {l:'Titip CV ke resepsionis',f:()=>{
+      const a=S.apps[job.id];
+      if(a)return show({k:'lobby',j:j},'Kamu sudah punya catatan lamaran di sini. Resepsionis hanya mengangguk.',[{l:'Kembali',f:()=>wcLobby(j)}]);
+      if(S.sets<1||!S.cv)return show({k:'lobby',j:j},'Kamu tidak membawa berkas cetak. Resepsionis menggeleng.',[{l:'Kembali',f:()=>wcLobby(j)}]);
+      S.sets--;S.apps[job.id]={st:'wait',decide:S.day+2,pass:(S.cv.score+(S.edu===2?2:1)+rnd(2))>=job.thr};
+      show({k:'lobby',j:j},'Resepsionis menerima berkasmu: "Nanti kami hubungi lewat email."',[{l:'Keluar gedung',f:()=>jobMenu(j)}]);}},
+    {l:'Naik ke lantai HRD',f:()=>trySneak(j)},
+    {l:'Keluar gedung',f:()=>jobMenu(j)}]);
+}
+function trySneak(j){
+  const job=JOBS[j];if(advance(10))return;
+  if(Math.random()<(job.tier===2?.25:.4)){
+    iv={j:j,job:job,si:0,bonus:-1,qs:[],qi:0,score:0,div:null,react:''};
+    return show({k:'lobby',j:j},'Kamu ikut rombongan karyawan masuk lewat pintu samping dan naik ke lantai HRD. Staf HRD heran: "Anda siapa? Ada janji?"',[
+      {l:'Saya mau melamar, Pak/Bu',f:runStage},{l:'Mundur pelan-pelan',f:()=>jobMenu(j)}]);
+  }
+  if(advance(60))return;
+  S.energy=Math.max(0,S.energy-15);S.apps[job.id]={st:'ban'};
+  show({k:'gate',j:j},'Satpam menangkap lenganmu: "Mau ke mana, Mas?!" Kamu digiring ke pos, KTP difoto, dan namamu dicatat. Perusahaan ini kini menolak namamu. (-60 menit)',[{l:'Pergi dengan malu',f:()=>jobMenu(j)}]);
 }
 function lobbyIn(j){
   const job=JOBS[j],a=S.apps[job.id];
@@ -636,7 +696,7 @@ function lobbyWait(j,b){
 function startIv(j,x){
   const job=JOBS[j];
   iv={j:j,job:job,si:0,bonus:0,qs:[],qi:0,score:0,div:null,react:''};
-  show({k:'bld',j:j},'Kamu masuk dan menyerahkan lamaran langsung.',[{l:'Lanjut',f:runStage}]);
+  show({k:'shopin',j:j},'Kamu menyerahkan lamaran langsung ke pemilik.',[{l:'Lanjut',f:runStage}]);
 }
 const WHO={owner:'owner',psiko:'psiko',hrd:'hrd',user:'user',dir:'dir'};
 const INTRO={owner:'Pemilik usaha menyambutmu santai sambil membolak-balik CV-mu.',psiko:'Kamu diminta mengerjakan psikotes singkat di ruang tes.',hrd:'HRD tersenyum: "Silakan duduk. Kita mulai wawancaranya."',user:'Calon atasan (user) masuk membawa CV-mu dan duduk di depanmu.',dir:'Direktur menatapmu dari balik meja besar. Ini tahap terakhir.'};
@@ -652,10 +712,10 @@ function runStage(){
 function adminCheck(){
   const job=iv.job;
   if(S.sets<job.sets){
-    return show({k:iv.job.tier?'lobby':'bld',j:iv.j},'"Berkasnya kurang. Perlu '+job.sets+' set (CV, KTP, ijazah). Bapak baru bawa '+S.sets+'." Lengkapi di fotokopi lalu kembali selama jadwal masih berlaku.',[{l:'Keluar & lengkapi berkas',f:()=>{S.at=job.loc;scene='map';selDest=-1;}}]);
+    return show({k:iv.job.tier?'lobby':'shopin',j:iv.j},'"Berkasnya kurang. Perlu '+job.sets+' set (CV, KTP, ijazah). Bapak baru bawa '+S.sets+'." Lengkapi di fotokopi lalu kembali selama jadwal masih berlaku.',[{l:'Keluar & lengkapi berkas',f:()=>{S.at=job.loc;scene='map';selDest=-1;}}]);
   }
   S.sets-=job.sets;iv.si++;
-  show({k:iv.job.tier?'lobby':'bld',j:iv.j},'Berkas diperiksa: CV, KTP, dan ijazah lengkap. "Baik, silakan tunggu sebentar."',[{l:'Lanjut',f:runStage}]);
+  show({k:iv.job.tier?'lobby':'shopin',j:iv.j},'Berkas diperiksa: CV, KTP, dan ijazah lengkap. "Baik, silakan tunggu sebentar."',[{l:'Lanjut',f:runStage}]);
 }
 function pickDiv(){
   show({k:'room',who:'hrd'},'HRD: "Divisi mana yang paling kamu minati? Penempatan ini menentukan wawancara berikutnya."',[
