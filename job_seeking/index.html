@@ -649,7 +649,7 @@ function arrived(){hereMenu();}
 function openCheck(lo){
   const h=S.min/60;const k=LOC[lo].k;if(k==='mart')return true;const r=k==='fc'||k==='warteg'?[7,21]:k==='samsat'?[8,15]:k==='dealer'?[9,18]:[8,17];
   if(h>=r[0]&&h<r[1])return true;
-  show({k:k==='fc'?'fc':k==='samsat'?'samsat':k==='warteg'?'warteg':'bld',j:LOC[lo].j},'Tempat ini tutup. Jam buka: '+r[0]+':00 - '+r[1]+':00.',[{l:'Ke peta',f:()=>{scene='map';}}]);return false;
+  show({k:k==='fc'?'fc':k==='samsat'?'samsat':k==='warteg'?'warteg':k==='dealer'?'dealer':'bld',j:LOC[lo].j},'Tempat ini tutup. Jam buka: '+r[0]+':00 - '+r[1]+':00.',[{l:'Ke peta',f:()=>{scene='map';}}]);return false;
 }
 
 // ===== Rumah =====
