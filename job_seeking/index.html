@@ -673,7 +673,7 @@ function moreMenu(t){
     {l:'Bayar tagihan'+(nb?' ('+nb+')':''),f:()=>billsMenu()},
     {l:'Pinjam uang tetangga',f:()=>loanMenu()},
     {l:'Kartu kredit',f:()=>cardMenu()},
-    {l:'Catatan hidup',f:lifeNote}].concat(S.house&&S.hLive===false?[{l:'Pindah ke rumah KPR',f:moveHouse}]:[],w0()?[{l:S.work.biz?'Tutup usaha':'Resign dari pekerjaan',f:resignMenu}]:[],[{l:'Kembali',f:()=>homeMenu()}]));
+    {l:'Catatan hidup',f:lifeNote}].concat(S.preman&&!S.ormas?[{l:'Bentuk ormas',off:(S.fear||0)<50,f:ormasFound}]:S.ormas?[{l:'Ormas',f:ormasMenu}]:[],S.house&&S.hLive===false?[{l:'Pindah ke rumah KPR',f:moveHouse}]:[],w0()?[{l:S.work.biz?'Tutup usaha':'Resign dari pekerjaan',f:resignMenu}]:[],[{l:'Kembali',f:()=>homeMenu()}]));
 }
 function w0(){return !!(S.work&&(S.work.biz||employed()));}
 
@@ -716,7 +716,7 @@ function collectScene(b,msg){
         if(won){if(dc){b.hold=S.day+2;m='Debt collector kabur terbirit-birit dan tidak berani datang 2 hari. Tagihan tetap ada.';}
           else{b.paid=true;S.conf=Math.max(0,S.conf-1);m='Tetanggamu ketakutan dan tidak berani menagih lagi. Utangnya hangus, tapi satu gang jadi takut padamu.';}}
         else{S.energy=Math.min(S.energy,20);S.money=Math.max(0,S.money-120000);S.conf=Math.max(0,S.conf-1);b.amt=Math.round(b.amt*1.1/1000)*1000;m='Kamu KO. Saat sadar, dompetmu berkurang '+rp(120000)+' dan tagihan naik 10%.';}
-        if(S.evil>=5)return premanEnd();
+        if(S.evil>=5&&!S.preman)return premanEnd();
         done(m);}});}},
     {l:'Sembunyi di kamar',f:()=>{
       if(advance(90))return;
@@ -737,10 +737,10 @@ function loanMenu(t){
     else moreMenu('Ditolak halus: "Lagi susah juga, Mas." Kamu pulang dengan canggung.');
   };
   show({k:'home'},t||'Pinjam uang ke tetangga? Gratis bunga, tapi kalau telat ditagih dan jadi omongan satu gang.',[
-    {l:'Pinjam Rp 100rb',f:()=>ask(100000,.9)},{l:'Pinjam Rp 300rb',f:()=>ask(300000,.65)},{l:'Pinjam Rp 500rb',f:()=>ask(500000,.4)},{l:'Pinjol online Rp 2jt (bunga 12%/bln)',f:()=>{S.money+=2000000;S.bills.push(mkBill('pinjol',2240000,S.day+30));S.sAdd=(S.sAdd||0)+3;if(advance(15))return;moreMenu('Dana Rp 2jt cair dalam 10 menit. Tagihan Rp 2,2jt jatuh tempo 30 hari lagi dan bunganya mencekik.');}},{l:'Kembali',f:()=>moreMenu()}]);
+    {l:'Pinjam Rp 100rb',f:()=>ask(100000,.9)},{l:'Pinjam Rp 300rb',f:()=>ask(300000,.65)},{l:'Pinjam Rp 500rb',f:()=>ask(500000,.4)},...(S.preman?[{l:'Minta paksa (palak tetangga)',f:palakTetangga}]:[]),{l:'Pinjol online Rp 2jt (bunga 12%/bln)',f:()=>{S.money+=2000000;S.bills.push(mkBill('pinjol',2240000,S.day+30));S.sAdd=(S.sAdd||0)+3;if(advance(15))return;moreMenu('Dana Rp 2jt cair dalam 10 menit. Tagihan Rp 2,2jt jatuh tempo 30 hari lagi dan bunganya mencekik.');}},{l:'Kembali',f:()=>moreMenu()}]);
 }
 function lifeNote(){
-  const ls=['Tingkat hidup: '+LIFE[S.life].n,'Biaya hidup harian: '+rp(S.daily),'Jalan hidup: '+karma()+(S.record?' | SKCK bermasalah':'')];
+  const ls=['Tingkat hidup: '+LIFE[S.life].n,'Biaya hidup harian: '+rp(S.daily),'Jalan hidup: '+karma()+(S.record?' | SKCK bermasalah':'')].concat(S.preman?['Ditakuti: '+(S.fear||0)+'/100 | Incaran polisi: '+(S.heat||0)+'/100'+(S.ormas?' | Ormas: '+S.ormas.mem+' anggota':'')]:[]);
   openBills().forEach(b=>ls.push('- '+b.n+' '+rp(b.amt)+', jatuh tempo hari ke-'+b.due+(S.day>b.due?' (TELAT)':'')));
   if(S.work){const w=S.work;ls.push(w.biz?'Usaha sendiri':w.unemp?'Sedang menganggur':wJob().pos+' di '+wJob().name+', gaji '+rp(w.sal));ls.push('Gajian berikutnya hari ke-'+w.nextPay+' | bulan '+w.m+'/'+WM+(w.biz||w.unemp?'':' | Rep '+w.rep+'/10 | SP '+w.sp+'/3 | Cuti '+w.cuti));}
   if(S.leasing)ls.push('Motor ditarik leasing. Lunasi cicilannya untuk mengambil kembali.');
@@ -787,7 +787,7 @@ function parkirLiar(){
     return show({k:'door',who:'dc'},'Seorang preman setempat menghampirimu: "Ini wilayah kami. Setor atau angkat kaki!"',[
       {l:'Bayar setoran Rp 30rb',off:S.money<30000,f:()=>{S.money-=30000;earn(0,'Kamu menyetor dan boleh lanjut mangkal.');}},
       {l:'Lawan dia (mode tinju)',f:()=>startFight({who:'preman',bg:'door',hp:9,windT:.6,onEnd:won=>{
-        if(S.evil>=5)return premanEnd();
+        if(S.evil>=5&&!S.preman)return premanEnd();
         if(won)return earn(8,'Preman itu tumbang dan kabur. Orang-orang mulai segan padamu.');
         S.energy=Math.min(S.energy,20);S.money=Math.max(0,S.money-100000);
         martMenu('Kamu KO dan dompetmu dirampas (-Rp 100rb). Hari ini kamu pulang tanpa hasil.');}})},
@@ -867,7 +867,7 @@ function nextDay(forced){
   const od=S.bills.filter(b=>!b.paid&&b.late>0).length;
   S.stress=Math.min(100,Math.round((S.stress||0)*(hLive()?.6:.7)+od*8+(S.hunger>=70?5:0)+(S.sick>0?5:0)+(S.sAdd||0)));S.sAdd=0;
   if(S.stress>=60)news.push('Pikiranmu penuh, semua terasa berat dan cepat melelahkan.');
-  const rested=!S.outToday&&!forced;S.outToday=false;
+  const rested=!S.outToday&&!forced;S.outToday=false;S.heat=Math.max(0,(S.heat||0)-4);
   if(S.sick>0){S.sick-=rested?2:1;if(S.sick<=0){S.sick=0;S.sickK=null;news.push(rested?'Seharian istirahat di rumah, badanmu sudah pulih dari sakit.':'Badanmu sudah pulih dari sakit.');}else news.push('Kamu masih '+S.sickK+'. Sisa sekitar '+S.sick+' hari. '+(rested?'Istirahat penuh di rumah membuatmu sembuh lebih cepat.':'Kalau keluar rumah terus, sembuhnya lebih lambat dan energi pulih setengah.'));}
   else if((e0<=10&&Math.random()<.6)||(e0<=25&&Math.random()<.2+S.stress/300)){S.sick=3+rnd(3);S.sickK=['flu','demam','batuk-batuk'][rnd(3)];news.push('Karena terlalu lelah, kamu jatuh sakit: '+S.sickK+'. Beli obat di minimarket atau istirahat.');}
   const msg='Hari ke-'+S.day+'. Biaya hidup hari ini '+rp(S.daily)+'.'+(news.length?'\n'+news.join(' '):'');
@@ -1700,6 +1700,71 @@ BANK.psiko.push(qSeq,qSeq,qLetter,qDisc,qTime,
 BANK.admin.push(qSum,qSum,qDisc);
 BANK.ops.push(qTime,qSum);
 
+// ===== Jalan preman & ormas =====
+function palakTetangga(){
+  if(S.energy<20)return loanMenu('Kamu terlalu capek untuk mendatangi tetangga.');
+  if(advance(30))return;
+  const f=S.fear||0,g=Math.round((300+rnd(500)+f*5)*1000/1000)*1000;
+  S.money+=g;S.fear=Math.min(100,f+1);S.heat=Math.min(100,(S.heat||0)+5);S.conf=Math.max(0,S.conf-1);
+  const m='Kamu mendatangi tetangga dengan wajah dingin. Tidak ada yang berani menolak. Dia menyerahkan '+rp(g)+' dan tidak minta dikembalikan.';
+  if(Math.random()<(S.heat||0)/160)return policeRaid(()=>moreMenu(m));
+  moreMenu(m);
+}
+function ormasFound(){
+  if((S.fear||0)<50)return moreMenu('Namamu belum cukup ditakuti untuk membentuk ormas. Butuh minimal 50/100.');
+  const cost=1000000;
+  show({k:'preman'},'Membentuk ormas butuh kaos seragam, bendera, dan posko kecil. Biayanya '+rp(cost)+'. Ormas bisa memungut "uang keamanan" dari warung, toko, dan perusahaan, tapi polisi akan mengincarmu.',[
+    {l:'Bentuk ormas ('+rp(cost)+')',off:S.money<cost,f:()=>{S.money-=cost;S.ormas={mem:8,total:0,name:'Ormas Setempat'};S.heat=Math.min(100,(S.heat||0)+10);moreMenu('Ormasmu resmi berdiri dengan 8 anggota. Orang mulai melihat kaos seragam kalian di jalan.');}},
+    {l:'Batal',f:()=>moreMenu()}]);
+}
+function ormasLvl(){const t=S.ormas.total;return t<3000000?1:t<15000000?2:3;}
+function ormasMenu(t){
+  const o=S.ormas,l=ormasLvl();
+  show({k:'preman'},t||('Posko ormas. Anggota '+o.mem+' | Level '+l+' | Total setoran '+rp(o.total)+'\nDitakuti '+(S.fear||0)+'/100 | Incaran polisi '+(S.heat||0)+'/100'),[
+    {l:'Tagih setoran warung & lapak',f:()=>ormasOp(1)},
+    {l:'Palak toko & minimarket',f:()=>ormasOp(2)},
+    {l:'Minta jatah ke perusahaan',off:l<2,f:()=>ormasOp(3)},
+    {l:'Rekrut anggota (Rp 300rb)',off:S.money<300000,f:()=>{S.money-=300000;const n=5+rnd(6);o.mem+=n;S.fear=Math.min(100,(S.fear||0)+2);if(advance(60))return;ormasMenu('Kamu merekrut '+n+' anggota baru dari pengangguran sekitar. Total '+o.mem+'.');}},
+    {l:'Titip "uang keamanan" ke oknum (Rp 1jt)',off:S.money<1000000||(S.heat||0)<10,f:()=>{S.money-=1000000;S.heat=Math.max(0,(S.heat||0)-30);ormasMenu('Seorang oknum menerima amplop dan berjanji "membantu mengamankan". Perhatian polisi turun.');}},
+    {l:'Kembali',f:()=>moreMenu()}]);
+}
+const OPS=[null,
+ {n:'Setoran warung & lapak',min:150,r:150,heat:10,fear:2,tm:120,txt:'Anggota ormas menyisir warung dan lapak. Semua menyerahkan setoran tanpa banyak bicara.'},
+ {n:'Palak toko & minimarket',min:300,r:300,heat:16,fear:3,tm:150,txt:'Kamu datang membawa belasan anggota ke deretan toko dan minimarket. Para pemilik menyerahkan "uang keamanan" sambil menunduk.'},
+ {n:'Jatah dari perusahaan',min:1000,r:1200,heat:24,fear:4,tm:180,txt:'Kamu dan pengurus ormas mendatangi kantor perusahaan, meminta "jatah keamanan dan proyek". Manajemen yang ketakutan menyetor amplop tebal.'}];
+function ormasOp(k){
+  const o=S.ormas,op=OPS[k],l=ormasLvl();
+  if(S.energy<30||S.min>21*60)return ormasMenu('Terlalu capek atau sudah terlalu malam untuk turun ke lapangan.');
+  drain(20);if(advance(op.tm))return;
+  const mult=1+Math.min(60,o.mem)/60,g=Math.round((op.min+rnd(op.r))*(1+(l-1)*.5)*mult/10)*10000;
+  const win=g;S.money+=win;o.total+=win;S.fear=Math.min(100,(S.fear||0)+op.fear);S.heat=Math.min(100,(S.heat||0)+op.heat);
+  const m=op.txt+' Hasil '+rp(win)+'.';
+  if(o.total>=90000000&&o.mem>=35&&(S.fear||0)>=85)return bossEnding();
+  if(Math.random()<(S.heat||0)/110)return policeRaid(()=>ormasMenu(m));
+  ormasMenu(m);
+}
+function policeRaid(cont){
+  const pay=Math.round(Math.min(3000000,1500000+(S.heat||0)*20000)/10000)*10000;
+  show({k:'tilang'},'Polisi menggerebek! Beberapa mobil patroli memotong jalanmu. "Kami dapat laporan pemerasan dan pungli. Ikut ke kantor!"',[
+    {l:'Bayar damai '+rp(pay),off:S.money<pay,f:()=>{S.money-=pay;S.heat=Math.max(0,(S.heat||0)-35);S.record=true;cont();}},
+    {l:'Kabur lewat gang',f:()=>{if(Math.random()<.5){S.heat=Math.max(0,(S.heat||0)-10);S.stress=Math.min(100,(S.stress||0)+12);return show({k:'macet'},'Kamu berlari lewat gang sempit, memanjat tembok, dan lolos. Jantungmu hampir copot.',[{l:'Lanjut',f:cont}]);}ormasJail();}},
+    {l:'Menyerah dan ikut',f:ormasJail}]);
+}
+function ormasJail(){
+  const d=5+rnd(6);S.jail++;S.record=true;S.apps={};
+  if(S.ormas)S.ormas.mem=Math.max(3,Math.floor(S.ormas.mem/2));
+  S.fear=Math.max(0,(S.fear||0)-20);S.heat=0;
+  if(S.jail>=3){clearSave();hasSave=false;return show({k:'lose'},'Ini ketiga kalinya kamu masuk sel. Ormasmu bubar, anak buahmu mencari bos baru, dan namamu hanya tinggal cerita di sel. Level 1 gagal.',[{l:'Coba lagi',f:()=>{scene='title';}}]);}
+  const news=[];let go=null;for(let i=0;i<d&&!go;i++){S.day++;go=tickBills(news);}
+  S.min=450;S.energy=70;S.at=0;S.conf=Math.max(0,S.conf-2);
+  if(go||S.money<0){clearSave();hasSave=false;return show({k:'lose'},go||'Keluar penjara, kamu tidak punya apa-apa lagi. Level 1 gagal.',[{l:'Coba lagi',f:()=>{scene='title';}}]);}
+  show({k:'lose'},'Kamu ditahan '+d+' hari. Separuh anggota ormas bubar, rasa takut orang berkurang, dan SKCK-mu makin hitam. Tapi namamu di sel justru makin disegani.',[{l:'Pulang',f:()=>homeMenu('Hari ke-'+S.day+'. Kamu baru bebas dan harus membangun kembali nama besarmu.')}]);
+}
+function bossEnding(){
+  const tot=S.ormas.total;clearSave();hasSave=false;
+  show({k:'preman'},'Ormasmu kini '+S.ormas.mem+' anggota berseragam. Tidak ada warung, minimarket, atau perusahaan di wilayah ini yang berani menolak "uang keamanan". Total setoran '+rp(tot)+'.\nPolisi setempat memilih menutup mata, pejabat hadir di acara ormasmu, dan semua orang memanggilmu "Bos".\nKamu jadi bos preman dan ketua ormas yang ditakuti seluruh wilayah. Level 1 berakhir di puncak dunia gelap.',[{l:'Main lagi',f:()=>{scene='title';}}]);
+}
+
 // ===== Kantor =====
 function jobMenu(j,t){
   if(isMyWork(j))return workplace(j,t);
@@ -1954,12 +2019,12 @@ JOBS.forEach(j=>{j.stages=STAGES[j.tier];});
 // ===== Tinju orang pertama =====
 let fight=null;
 function premanEnd(){
-  clearSave();hasSave=false;
-  show({k:'preman'},'Kamu makin sering main tangan. Orang-orang mulai takut, lalu mulai membayarmu untuk "menjaga" lapak. Kamu jadi preman pasar. Level 1 berakhir di jalan lain.',[{l:'Main lagi',f:()=>{scene='title';}}]);
+  S.preman=1;S.fear=Math.max(S.fear||0,25);
+  show({k:'preman'},'Kamu makin sering main tangan. Orang-orang mulai segan, lalu takut. Namamu disebut pelan-pelan di warung dan lapak: "Itu yang suka hajar orang." Preman pasar mulai menyapamu dengan hormat.\nJalan hidupmu belum tamat. Sekarang kamu bisa memaksa tetangga meminjamkan uang. Kalau makin ditakuti, kamu bisa membentuk ormas, tapi polisi pun akan mengawasimu.',[{l:'Lanjut',f:()=>hereMenu()}]);
 }
 function fightEnd(j,m){
   if(advance(20))return;
-  if(S.evil>=5)return premanEnd();
+  if(S.evil>=5&&!S.preman)return premanEnd();
   jobMenu(j,m);
 }
 function startFight(o){
@@ -1985,7 +2050,7 @@ function updFight(dt){
     f.t=0;}}
   else if(f.state==='stagger'){if(f.t>=.7){f.state='idle';f.t=0;f.next=.8+Math.random()*.8;}}
   else if(f.state==='recover'){if(f.t>=.5){f.state='idle';f.t=0;f.next=.7+Math.random()*.9;}}
-  if(f.hp<=0){f.over=true;f.won=true;S.evil++;}
+  if(f.hp<=0){f.over=true;f.won=true;S.evil++;S.fear=Math.min(100,(S.fear||0)+8);}
   else if(S.energy<=0){f.over=true;f.won=false;}
 }
 function drawFight(){
