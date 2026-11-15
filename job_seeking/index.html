@@ -736,18 +736,31 @@ function billInfo(b){
 
 function karma(){const k=S.evil+S.crime;return k===0?'Orang baik-baik':k<4?'Abu-abu':'Berbahaya';}
 function parkirLiar(){
-  if(S.energy<25||S.min>=19*60)return gigMenu('Terlalu capek atau sudah terlalu malam.');
-  S.crime++;S.energy-=20;if(advance(180))return;
-  const r=Math.random()+S.crime*.06+(S.record?.1:0);
-  if(r<.5){const g=60000+rnd(90000);S.money+=g;S.hustle++;return moreMenu('Kamu pakai rompi oranye dan meniup peluit di depan minimarket. Dapat '+rp(g)+'. Tidak ada yang protes.');}
-  if(r<.7)return moreMenu('Tukang parkir asli dan preman setempat mengusirmu: "Ini wilayah kami!" Kamu pulang tanpa hasil.');
-  if(r<.85){S.conf=Math.max(0,S.conf-1);return show({k:'tilang'},'Razia Dinsos dan Satpol PP! Kamu diangkut ke panti sosial dan baru dilepas besok pagi.',[{l:'Lanjut',f:()=>nextDay(false)}]);}
-  if(r<1){
+  if(LOC[S.at].k!=='mart')return gigMenu('Mangkal parkir di depan Indomaret atau Alfamart. Pergi ke sana dulu.');
+  if(S.energy<25||S.min>=19*60)return martMenu('Terlalu capek atau sudah terlalu malam untuk mangkal.');
+  S.crime++;drain(20);if(advance(180))return;
+  const earn=(bonus,pre)=>{
+    const n=28+rnd(35)+bonus,g=n*2000;
+    const r=Math.random()+S.crime*.04+(S.record?.1:0);
+    if(r<.82){S.money+=g;S.hustle++;return martMenu((pre?pre+' ':'')+'Kamu memarkir sekitar '+n+' motor, masing-masing Rp 2rb. Total '+rp(g)+'.');}
+    if(r<.92){S.conf=Math.max(0,S.conf-1);S.money+=Math.round(g/3/1000)*1000;return show({k:'tilang'},'Razia Dinsos dan Satpol PP! Kamu diangkut ke panti sosial dan baru dilepas besok pagi. Sebagian uang parkir sempat kamu selamatkan.',[{l:'Lanjut',f:()=>nextDay(false)}]);}
     const fine=200000;
-    return show({k:'tilang'},'Warga melapor. Polisi memeriksamu karena pungli parkir liar. Denda damai '+rp(fine)+'.',[
-      {l:S.money>=fine?'Bayar denda':'Tidak punya uang (ditahan semalam)',f:()=>{if(S.money>=fine){S.money-=fine;moreMenu('Kamu membayar denda dan diperingatkan keras. Catatan polisi bertambah.');}else nextDay(true);}}]);
+    show({k:'tilang'},'Warga melapor. Polisi memeriksamu karena pungli parkir liar. Denda damai '+rp(fine)+'.',[
+      {l:S.money>=fine?'Bayar denda':'Tidak punya uang (ditahan semalam)',f:()=>{if(S.money>=fine){S.money-=fine;S.record=S.record||Math.random()<.3;martMenu('Kamu membayar denda dan diperingatkan keras. Catatan polisi bertambah.');}else nextDay(true);}}]);
+  };
+  const rep=S.evil;
+  if(rep>=3&&Math.random()<.7)return earn(15,'Preman setempat melihatmu dari jauh dan memilih tidak mengganggu, nama baikmu dalam hal berkelahi sudah terdengar.');
+  if(Math.random()<.5-Math.min(.3,rep*.08)){
+    return show({k:'door',who:'dc'},'Seorang preman setempat menghampirimu: "Ini wilayah kami. Setor atau angkat kaki!"',[
+      {l:'Bayar setoran Rp 30rb',off:S.money<30000,f:()=>{S.money-=30000;earn(0,'Kamu menyetor dan boleh lanjut mangkal.');}},
+      {l:'Lawan dia (mode tinju)',f:()=>startFight({who:'preman',bg:'door',hp:9,windT:.6,onEnd:won=>{
+        if(S.evil>=5)return premanEnd();
+        if(won)return earn(8,'Preman itu tumbang dan kabur. Orang-orang mulai segan padamu.');
+        S.energy=Math.min(S.energy,20);S.money=Math.max(0,S.money-100000);
+        martMenu('Kamu KO dan dompetmu dirampas (-Rp 100rb). Hari ini kamu pulang tanpa hasil.');}})},
+      {l:'Kabur, pulang tanpa hasil',f:()=>martMenu('Kamu angkat kaki sebelum urusan makin panjang. Tiga jam terbuang.')}]);
   }
-  goJail(5+rnd(4));
+  earn(0,'Tidak ada preman yang mengganggu hari ini.');
 }
 function goJail(d){
   S.jail++;S.record=true;S.apps={};const news=[];let go=null;
@@ -764,7 +777,7 @@ function gigMenu(t){
   show({k:'home'},t||'Cari uang tambahan. Butuh energi minimal 30 dan harus sebelum jam 20:00.\nUangmu: '+rp(S.money),[
     {l:'Ojol (mitra aplikasi)',off:S.min>=22*60,f:()=>ojolMenu()},
     {l:'Serabutan (+Rp 80rb)',off:!ok,f:()=>{S.money+=80000;S.hustle++;S.energy-=30;if(advance(240))return;moreMenu('Kerja serabutan empat jam, dapat '+rp(80000)+'.');}},
-    {l:'Parkir liar (gelap)',off:!ok,f:parkirLiar},
+    {l:'Parkir liar (di Indomaret/Alfamart)',off:!ok,f:parkirLiar},
     {l:'Jual HP lama (+Rp 150rb)',off:S.sold,f:()=>{S.sold=true;S.money+=150000;if(advance(60))return;moreMenu('HP lamamu laku '+rp(150000)+'. Hanya bisa sekali.');}},
     {l:'Kembali',f:()=>moreMenu()}]);
 }
@@ -1033,6 +1046,7 @@ function martMenu(t){
     eatOpt('Kopi energi',6000,5,15,'Kopi dingin membuat matamu lebih terjaga.'),
     eatOpt('Air mineral',4000,3,0,'Haus hilang, tapi perut masih kosong.'),
     {l:'Obat flu (Rp 12rb)',off:S.money<12000||!(S.sick>0),f:()=>{S.money-=12000;S.sick=Math.max(0,S.sick-2);if(S.sick<=0)S.sickK=null;S.stress=Math.max(0,S.stress-5);if(advance(10))return;hereMenu(S.sick>0?'Obat diminum. Gejalamu mulai mereda, tapi belum sembuh.':'Obat diminum. Badanmu terasa jauh lebih enak.');}},
+    {l:'Mangkal parkir (ilegal)',off:S.energy<25||S.min>=19*60,f:parkirLiar},
     {l:'Ke peta',f:()=>{scene='map';selDest=-1;}}]);
 }
 function wartegMenu(t){
@@ -1803,12 +1817,12 @@ function drawFight(){
   const f=fight;if(!f)return;if(PORT)return fightP(f);topbar();
   if(f.bg==='gate')drawArt({k:'bld',j:f.j},H-12);
   else{R(0,12,W,188,6);R(0,142,W,58,4);R(0,140,W,3,15);R(84,20,152,124,15);R(90,26,140,116,13);}
-  const o=f.who==='satpam'?{shirt:1,cap:1,hair:15,badge:1}:f.who==='dc'?{shirt:0,hair:0,cap:0,glasses:1}:{hair:13,shirt:10};
+  const o=f.who==='satpam'?{shirt:1,cap:1,hair:15,badge:1}:f.who==='dc'?{shirt:0,hair:0,cap:0,glasses:1}:f.who==='preman'?{shirt:8,hair:0,cap:1}:{hair:13,shirt:10};
   const sw=f.hit>0?Math.sin(tNow*90)*5:Math.sin(tNow*3)*3,cx=160+sw+(f.state==='stagger'?-14:0);
   bust(cx,16,o,2.3);
   if(f.state==='wind'){const k=Math.min(1,f.t/f.windT),sz=8+k*64;R(cx+34-sz/2-k*30,96-sz/2+k*34,sz,sz,f.who==='dc'?5:5);R(cx+34-sz/2-k*30,96-sz/2+k*34+sz*.7,sz,sz*.3,f.who==='dc'?0:9);Ts('!',cx+40,40,8,1);}
   g.globalAlpha=.85;R(60,16,200,9,15);g.globalAlpha=1;R(62,18,196,5,12);R(62,18,Math.max(0,196*f.hp/f.max),5,8);
-  Ts((f.who==='satpam'?'SATPAM':f.who==='dc'?'DEBT COLLECTOR':'TETANGGA'),64,27,7,0);
+  Ts((f.who==='satpam'?'SATPAM':f.who==='dc'?'DEBT COLLECTOR':f.who==='preman'?'PREMAN':'TETANGGA'),64,27,7,0);
   g.globalAlpha=.8;R(70,160,180,11,15);g.globalAlpha=1;Ts(f.msg,160,162,6,1);
   const lift=f.guard>0;
   const glove=(x,y)=>{R(x,y,46,46,8);R(x+4,y+4,38,10,9);R(x,y+38,46,8,7);R(x,y,46,2,15);};
@@ -1827,12 +1841,12 @@ function fightP(f){
   topbar();const bz=H-50,ah=bz-TOP,gy=Math.round(ah*.68);
   if(f.bg==='gate')drawArt({k:'bld',j:f.j},ah);
   else{R(0,TOP,W,ah,6);R(0,TOP+gy,W,ah-gy,4);R(0,TOP+gy-2,W,3,15);R(24,TOP+8,152,gy-12,15);R(30,TOP+14,140,gy-24,13);}
-  const o=f.who==='satpam'?{shirt:1,cap:1,hair:15,badge:1}:f.who==='dc'?{shirt:0,hair:0,cap:0,glasses:1}:{hair:13,shirt:10};
+  const o=f.who==='satpam'?{shirt:1,cap:1,hair:15,badge:1}:f.who==='dc'?{shirt:0,hair:0,cap:0,glasses:1}:f.who==='preman'?{shirt:8,hair:0,cap:1}:{hair:13,shirt:10};
   const sw=f.hit>0?Math.sin(tNow*90)*5:Math.sin(tNow*3)*3,cx=W/2+sw+(f.state==='stagger'?-14:0),oy=TOP-12;
   bust(cx,16,o,2.3);
   if(f.state==='wind'){const k=Math.min(1,f.t/f.windT),sz=8+k*64;R(cx+34-sz/2-k*30,oy+96-sz/2+k*34,sz,sz,5);R(cx+34-sz/2-k*30,oy+96-sz/2+k*34+sz*.7,sz,sz*.3,f.who==='dc'?0:9);Ts('!',cx+40,oy+40,8,1);}
   g.globalAlpha=.85;R(4,TOP+3,W-8,9,15);g.globalAlpha=1;R(6,TOP+5,W-12,5,12);R(6,TOP+5,Math.max(0,(W-12)*f.hp/f.max),5,8);
-  Ts((f.who==='satpam'?'SATPAM':f.who==='dc'?'DEBT COLLECTOR':'TETANGGA'),8,TOP+14,7,0);
+  Ts((f.who==='satpam'?'SATPAM':f.who==='dc'?'DEBT COLLECTOR':f.who==='preman'?'PREMAN':'TETANGGA'),8,TOP+14,7,0);
   g.globalAlpha=.8;R(10,bz-62,W-20,11,15);g.globalAlpha=1;Ts(f.msg,W/2,bz-60,6,1);
   const base=bz-40,glove=(x,y)=>{R(x,y,46,46,8);R(x+4,y+4,38,10,9);R(x,y+38,46,8,7);R(x,y,46,2,15);};
   if(f.guard>0){glove(W/2-50,base-30);glove(W/2+4,base-30);}
