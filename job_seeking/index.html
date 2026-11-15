@@ -1342,16 +1342,21 @@ function yearEnd(job,biz){
       txt='Modal kecilmu kamu putar jadi usaha. Pengalaman narik dan serabutan mengajarimu soal rezeki harian. Setahun kemudian warungmu punya pelanggan tetap dan dua karyawan. Kamu kini pengusaha UMKM.';}
     else{kind='biasa';title='KARYAWAN BIASA';art={k:'win',title:'USAHA BANGKRUT'};
       txt='Usahamu bangkrut di pertengahan tahun karena modal kurang dan pelanggan sepi. Kamu melamar lagi dan akhirnya bekerja sebagai karyawan biasa, kini lebih sadar risiko.';}
+  }else if(W_.unemp&&!biz){
+    kind='nganggur';title='MASIH MENGANGGUR';art={k:'lose'};
+    txt='Setelah resign atau dipecat, kamu belum juga mendapat pekerjaan baru. Tabungan menipis dan kamu terus mengirim lamaran ke mana-mana.';
   }else{
     const perf=S.conf+(S.cv?S.cv.score/3:0)+job.tier*1.5+rnd(3)+Math.min(3,(W_.onTime||0)/6)-(W_.late||0)-(W_.fired?3:0)-(S.record?2:0)-k*1.5;
-    if(perf>=6&&!W_.fired&&(W_.late||0)<=1&&debt<=(W_.sal||0)*.5){kind='prestasi';title='KARYAWAN BERPRESTASI';art={k:'win',title:'KARYAWAN BERPRESTASI'};
+    if(perf>=6&&!W_.fired&&(W_.late||0)<=1&&debt<=(W_.sal||0)*.5&&!W_.scandal&&(W_.sp||0)<=1&&(W_.rep||0)>=5){kind='prestasi';title='KARYAWAN BERPRESTASI';art={k:'win',title:'KARYAWAN BERPRESTASI'};
       txt='Setahun kemudian kamu dinobatkan karyawan terbaik di '+job.name+'. Gajimu naik jadi '+rp(Math.round(job.sal*1.25/50000)*50000)+' dan atasan menawarimu posisi supervisor.';}
     else{kind='biasa';title='KARYAWAN BIASA';art={k:'win',title:'KARYAWAN BIASA'};
       txt='Setahun kemudian kamu masih bekerja di '+(job?job.name:'kantor')+'. Hidup berjalan stabil, tapi belum ada promosi. Cukup untuk membayar tagihan dan menabung pelan-pelan.';}
   }
   if(S.house&&kind!=='utang')txt+=' Cicilan rumah berjalan dan kamu punya tempat pulang sendiri.';
   if(S.car&&S.life!=='easy'&&kind!=='utang')txt+=' Mobil kreditanmu jadi tanda kerja kerasmu.';
-  if(W_.fired)txt+=' Kamu sempat dipecat di tengah tahun dan harus bangkit lagi.';
+  if(W_.fired&&!W_.unemp)txt+=' Kamu sempat dipecat di tengah tahun dan harus bangkit lagi.';
+  if(W_.scandal)txt+=' Skandal kantor masih membekas dan nama baikmu tidak sepenuhnya pulih.';
+  if((W_.switched||0)>0&&!W_.unemp)txt+=' Kamu berpindah kerja demi karier yang lebih baik.';
   show({k:'night'},'Dua belas bulan berlalu... Satu tahun setelah hari pertamamu mencari kerja.',[{l:'Lanjut',f:()=>show(art,title+'\n'+txt+'\n'+sum,[{l:'Lihat rincian',f:()=>endDetail(kind,title,job,biz)}])}]);
 }
 function endDetail(kind,title,job,biz){
@@ -1363,6 +1368,8 @@ function endDetail(kind,title,job,biz){
     'Aset: '+((S.car?'mobil':'')+(S.car&&S.house?' + ':'')+(S.house?'rumah KPR':'')||'tidak ada'),
     'Tagihan tepat waktu: '+(W_.onTime||0)+' | Terlewat: '+(W_.late||0),
     'Jalan hidup: '+karma()+' | Tingkat hidup: '+LIFE[S.life].n,
+    'Reputasi akhir: '+(W_.rep===undefined?'-':W_.rep+'/10')+' | SP: '+(W_.sp||0)+' | Terlambat total: '+(W_.lateTot||0)+' kali',
+    'Pindah kerja: '+(W_.switched||0)+'x | Skandal kantor: '+(W_.scandal?'ya':'tidak'),
     'Hari ke-'+S.day+(W_.fired?' | Pernah dipecat':'')];
   show({k:'night'},'KETERANGAN ENDING: '+title+'\n'+L1.join('\n'),[{l:'Lihat kredit',f:()=>startCredits(title)},{l:'Lewati kredit, main lagi',f:()=>{clearSave();hasSave=false;scene='title';}}]);
 }
@@ -1371,7 +1378,7 @@ const INT={pinjol:.12,paylater:.05,kartu:.035,kmacet:.05,sisa:.02,hp:.03,motor:.
 const PRI=['mobil','rumah','kartu','kmacet','sisa','kta','motor','pinjol','kos','paylater','hp','tetangga','warteg','hamil','sekolah','sakit'];
 function wJob(){return S.work&&S.work.job?JOBS.find(j=>j.id===S.work.job):null;}
 function workStart(job,biz){
-  S.work={job:biz?job.id:job.id,biz:!!biz,m:0,sal:biz?0:job.sal,fired:0,onTime:0,late:0,perf:0};
+  S.work={job:job.id,biz:!!biz,m:0,sal:biz?0:job.sal,fired:0,onTime:0,late:0,perf:0,rep:5,sp:0,lateTot:0,aff:0,affM:0,scandal:false,unemp:false,switched:0,searchDone:false};
   if(biz)S.money=Math.max(0,S.money-300000);
   S.at=0;workMonth();
 }
@@ -1392,7 +1399,9 @@ function workMonth(resume){
     // bunga tunggakan berbunga-bunga
     for(const b of S.bills)if(!b.paid&&b.due<=S.day-30){const r=INT[b.k]||.03;b.amt=Math.round(b.amt*(1+r)/1000)*1000;}
     if(w.m%4===0){let up=false;for(const b of S.bills)if(b.k==='rumah'){up=true;if(!b.paid)b.amt=Math.round(b.amt*1.05/1000)*1000;if(b.base)b.base=Math.round(b.base*1.05/1000)*1000;}if(up)note+=' Suku bunga KPR naik, cicilan rumah naik 5%.';}
-    if(w.biz){const hs=Math.min(S.hustle,6);inc=Math.round((1800000+hs*350000)*(.6+Math.random()*.8)/10000)*10000;if(Math.random()<(hardL?.22:.14)){inc=Math.round(inc*.2/10000)*10000;note+=' Bulan ini usahamu sepi.';}}
+    w.searchDone=false;
+    if(w.unemp){inc=S.ojol?600000:0;note+=' Kamu sedang menganggur.'+(S.ojol?' Narik ojol dapat Rp 600rb.':'')+' Cari kerja lewat menu Lainnya.';}
+    else if(w.biz){const hs=Math.min(S.hustle,6);inc=Math.round((1800000+hs*350000)*(.6+Math.random()*.8)/10000)*10000;if(Math.random()<(hardL?.22:.14)){inc=Math.round(inc*.2/10000)*10000;note+=' Bulan ini usahamu sepi.';}}
     else if(w.fired>0){inc=S.ojol?600000:0;w.fired--;note+=' Kamu sedang menganggur.'+(S.ojol?' Narik ojol dapat Rp 600rb.':'');if(w.fired===0){w.sal=Math.round(w.sal*.7/50000)*50000;note+=' Kamu dapat kerja baru dengan gaji lebih rendah.';}}
     else{inc=Math.round(w.sal*(S.life==='hard'?.9:.96)/10000)*10000;if(w.m===1)note+=' Gaji sudah dipotong BPJS dan pajak.';}
     w.sideDone=false;w.cost=monthCost()+Math.round(Math.max(0,inc-4000000)*.25/10000)*10000;S.money+=inc-w.cost;
@@ -1401,13 +1410,38 @@ function workMonth(resume){
   }
   const due=billsDue(),tot=due.reduce((a,b)=>a+b.amt,0),w2=w.cur||{inc:0,note:''};
   const list=due.length?due.map(b=>b.n+' '+rp(b.amt)).join(', '):'tidak ada';
-  show({k:w.biz?'umkm':'home'},'BULAN KE-'+w.m+' DARI 12\nPendapatan '+rp(w2.inc)+', biaya hidup -'+rp(w.cost||monthCost())+'.'+w2.note+'\nUangmu: '+rp(S.money)+'\nTagihan jatuh tempo: '+list+(due.length?' (total '+rp(tot)+')':''),due.length?[
+  const more={l:'Lainnya (sampingan, pinjaman, kerja)',f:()=>monthMore()};
+  show({k:w.biz?'umkm':'home'},'BULAN KE-'+w.m+' DARI 12'+(w.biz?'':w.unemp?' | MENGANGGUR':' | '+(wJob()?wJob().pos:'')+' (Rep '+w.rep+'/10, SP '+w.sp+'/3)')+'\nPendapatan '+rp(w2.inc)+', biaya hidup -'+rp(w.cost||monthCost())+'.'+w2.note+'\nUangmu: '+rp(S.money)+'\nTagihan jatuh tempo: '+list+(due.length?' (total '+rp(tot)+')':''),due.length?[
     {l:'Bayar semua sesuai urutan prioritas',f:()=>{const ds=due.slice().sort((a,b)=>PRI.indexOf(a.k)-PRI.indexOf(b.k));for(const b of ds)if(S.money>=b.amt)payMonthBill(b);resolveMonth();}},
     {l:'Pilih tagihan yang dibayar',f:()=>monthPay()},
-    {l:w.sideDone?'Kerja sampingan (sudah diambil)':'Kerja sampingan (+Rp 900rb, stres +10)',off:!!w.sideDone,f:()=>{w.sideDone=true;S.money+=900000;S.sAdd=(S.sAdd||0)+10;workMonth(true);}},
-    {l:'Pinjol darurat Rp 2jt (bunga 12%/bln)',f:()=>{S.money+=2000000;S.bills.push(mkBill('pinjol',2240000,S.day+30));S.sAdd=(S.sAdd||0)+3;workMonth(true);}},
-    {l:S.blacklist||S.life==='hard'?'Pinjaman bank (ditolak, BI Checking)':'Pinjaman bank Rp 5jt (12 cicilan, ~1,8%/bln)',off:S.blacklist||S.life==='hard'||S.bills.some(b=>b.k==='kta'&&!b.paid)||S.work.m>8,f:()=>{if(!bankOk()){S.sAdd=(S.sAdd||0)+3;return show({k:'home'},'Bank menolak pengajuan pinjamanmu. Slip gaji dan riwayat kreditmu belum meyakinkan.',[{l:'Kembali',f:()=>workMonth(true)}]);}S.money+=5000000;S.bills.push(Object.assign(mkBill('kta',510000,S.day+30),{rec:30,base:510000,left:12}));workMonth(true);}},
-    {l:'Lewati, bayar nanti',f:()=>resolveMonth()}]:[{l:w.sideDone?'Kerja sampingan (sudah diambil)':'Kerja sampingan (+Rp 900rb, stres +10)',off:!!w.sideDone,f:()=>{w.sideDone=true;S.money+=900000;S.sAdd=(S.sAdd||0)+10;workMonth(true);}},{l:'Lanjut',f:()=>resolveMonth()}]);
+    more,
+    {l:'Lewati, bayar nanti',f:()=>resolveMonth()}]:[more,{l:'Lanjut',f:()=>resolveMonth()}]);
+}
+function monthMore(){
+  const w=S.work,ops=[];
+  ops.push({l:w.sideDone?'Kerja sampingan (sudah diambil)':'Kerja sampingan (+Rp 900rb, stres +10)',off:!!w.sideDone,f:()=>{w.sideDone=true;S.money+=900000;S.sAdd=(S.sAdd||0)+10;workMonth(true);}});
+  ops.push({l:'Pinjol darurat Rp 2jt (bunga 12%/bln)',f:()=>{S.money+=2000000;S.bills.push(mkBill('pinjol',2240000,S.day+30));S.sAdd=(S.sAdd||0)+3;workMonth(true);}});
+  ops.push({l:S.blacklist||S.life==='hard'?'Pinjaman bank (ditolak, BI Checking)':'Pinjaman bank Rp 5jt (12 cicilan)',off:S.blacklist||S.life==='hard'||S.bills.some(b=>b.k==='kta'&&!b.paid)||w.m>8,f:()=>{if(!bankOk()){S.sAdd=(S.sAdd||0)+3;return show({k:'home'},'Bank menolak pengajuan pinjamanmu. Slip gaji dan riwayat kreditmu belum meyakinkan.',[{l:'Kembali',f:()=>workMonth(true)}]);}S.money+=5000000;S.bills.push(Object.assign(mkBill('kta',510000,S.day+30),{rec:30,base:510000,left:12}));workMonth(true);}});
+  if(!w.biz)ops.push({l:w.searchDone?'Cari kerja lain (sudah bulan ini)':'Cari kerja lain / kirim lamaran',off:!!w.searchDone,f:()=>jobSearch()});
+  if(!w.biz&&!w.unemp&&w.fired===0)ops.push({l:'Resign dari pekerjaan ini',f:()=>show({k:'room',who:'hrd'},'Yakin mau resign dari '+wJob().name+'? Tidak ada pesangon dan gajimu berhenti mulai bulan depan. Kamu harus mencari kerja baru.',[{l:'Ya, ajukan resign',f:()=>{w.unemp=true;w.sp=0;if(w.aff>0)w.aff=-2;S.sAdd=(S.sAdd||0)+5;workMonth(true);}},{l:'Batal',f:()=>monthMore()}])});
+  ops.push({l:'Kembali',f:()=>workMonth(true)});
+  show({k:'home'},'Pilih langkah tambahan bulan ini. Uangmu: '+rp(S.money),ops);
+}
+function jobSearch(){
+  const w=S.work;
+  const ops=JOBS.map(j=>({l:j.name.slice(0,16)+' '+rp(j.sal),off:!w.unemp&&w.fired===0&&j.id===w.job,f:()=>workApply(j)}));
+  ops.push({l:'Batal',f:()=>monthMore()});
+  show({k:'home'},'Kirim lamaran ke perusahaan mana? Perusahaan besar bergaji lebih tinggi tapi lebih sulit. Peluang bergantung percaya diri, CV, koneksi, dan riwayatmu.',ops);
+}
+function workApply(j){
+  const w=S.work;w.searchDone=true;
+  let p=(j.tier===0?.6:j.tier===1?.4:.22)+S.conf*.04+(S.cv?S.cv.score/70:0)+(S.connect?.1:0)-(S.record?.2:0)-(S.life==='hard'?.05:0)+((w.unemp||w.fired>0)?.05:0)-(w.scandal?.1:0);
+  if(Math.random()<p){
+    const nowJoin=()=>{w.job=j.id;w.sal=j.sal;w.unemp=false;w.fired=0;w.rep=4;w.sp=0;w.lateTot=w.lateTot||0;if(w.aff>0)w.aff=-2;w.switched++;workMonth(true);};
+    if(w.unemp||w.fired>0)return show({k:'room',who:'hrd'},'Kabar baik! '+j.name+' menerimamu sebagai '+j.pos+' dengan gaji '+rp(j.sal)+'. Kamu mulai bekerja bulan ini.',[{l:'Mulai bekerja',f:nowJoin}]);
+    return show({k:'room',who:'hrd'},j.name+' menawarimu posisi '+j.pos+' dengan gaji '+rp(j.sal)+'. Pindah berarti resign dari pekerjaan lama tanpa pesangon.',[{l:'Terima dan pindah',f:nowJoin},{l:'Tolak, tetap di sini',f:()=>workMonth(true)}]);
+  }
+  show({k:'room',who:'hrd'},'Lamaran ke '+j.name+' belum lolos seleksi. Coba lagi bulan depan atau tingkatkan CV dan percaya dirimu.',[{l:'Kembali',f:()=>workMonth(true)}]);
 }
 function payMonthBill(b){S.money-=b.amt;b.paid=true;S.work.onTime++;if(b.k==='motor'&&S.leasing){S.leasing=false;S.motor=true;}}
 function monthPay(){
@@ -1439,7 +1473,105 @@ function resolveMonth(){
     w.fired=2;const pes=Math.round(w.sal/50000)*50000;S.money+=pes;
     news.push('Kamu dipecat karena kinerja menurun. Pesangon '+rp(pes)+'.');
   }
-  show({k:'home'},'HASIL BULAN KE-'+w.m+'\n'+(news.length?news.join('\n'):'Semua tagihan beres. Hidupmu tenang bulan ini.')+'\nUangmu: '+rp(S.money)+' | Stres '+Math.round(S.stress)+'/100',[{l:'Lanjut',f:()=>monthEvent()}]);
+  show({k:'home'},'HASIL BULAN KE-'+w.m+'\n'+(news.length?news.join('\n'):'Semua tagihan beres. Hidupmu tenang bulan ini.')+'\nUangmu: '+rp(S.money)+' | Stres '+Math.round(S.stress)+'/100',[{l:'Lanjut',f:()=>officeMonth()}]);
+}
+
+// ===== Kehidupan kantor =====
+function wjIdx(){const i=JOBS.findIndex(x=>S.work&&x.id===S.work.job);return i<0?0:i;}
+function evDone(msg){show({k:'home'},msg,[{l:'Lanjut',f:()=>monthEvent()}]);}
+function offStress(n){S.stress=Math.min(100,(S.stress||0)+n);}
+function repAdd(n){const w=S.work;w.rep=Math.max(0,Math.min(10,w.rep+n));}
+function officeMonth(){
+  const w=S.work;
+  if(w.biz||w.unemp||w.fired>0)return monthEvent();
+  show({k:'room',who:'hrd'},'KEHIDUPAN KANTOR - bulan ke-'+w.m+'\nReputasi '+w.rep+'/10 | SP '+w.sp+'/3 | Kantor: '+wJob().name+'\nBagaimana sikapmu bulan ini?',[
+    {l:'Disiplin: datang pagi, kerja rapi',f:()=>officeRun(.35,'d')},
+    {l:'Biasa saja',f:()=>officeRun(1,'b')},
+    {l:'Santai: sering mepet jam masuk',f:()=>officeRun(1.9,'s')}]);
+}
+function officeRun(mult,style){
+  const w=S.work,msg=[];
+  const p=Math.min(.7,((S.car?.05:S.motor?.1:.18)+(S.stress>=60?.05:0))*mult);
+  let late=0;for(let d=0;d<20;d++)if(Math.random()<p)late++;
+  w.lateTot+=late;
+  msg.push(late?('Kamu terlambat masuk '+late+' kali bulan ini'+(S.motor||S.car?'':' (angkot sering molor)')+'.'):'Kamu hampir tidak pernah terlambat bulan ini.');
+  if(late){const cut=Math.round(w.sal*.01*late/10000)*10000;if(cut>0){S.money-=cut;msg.push('Gaji dipotong '+rp(cut)+'.');}}
+  if(style==='d'&&late<=1&&Math.random()<.65){repAdd(1);msg.push('Atasan memperhatikan kedisiplinanmu. Reputasi naik.');}
+  if(Math.random()<.3){repAdd(-1);msg.push('Persaingan di kantor membuat reputasimu sedikit tergerus.');}
+  if(style==='s'){repAdd(-1);offStress(-3);msg.push('Sikap santaimu mulai dibicarakan rekan.');}
+  if(late>=3&&late<5){repAdd(-1);msg.push('Atasan menegurmu soal keterlambatan.');}
+  let fired=false;
+  if(late>=5){w.sp++;repAdd(-1);msg.push('Kamu menerima Surat Peringatan '+w.sp+' dari HRD.');if(w.sp>=3)fired=true;}
+  if(!fired&&w.rep<=1&&Math.random()<.5){fired=true;msg.push('Perusahaan melakukan efisiensi dan kinerjamu dinilai paling rendah.');}
+  if(fired)return doFire(msg,'Kamu dipecat dari '+wJob().name+'.');
+  if(w.m===6&&w.rep>=7){const ns=Math.round(w.sal*1.12/50000)*50000;msg.push('Kamu dipromosikan! Gaji naik jadi '+rp(ns)+'.');w.sal=ns;}
+  show({k:'room',who:'hrd'},'HASIL KANTOR BULAN KE-'+w.m+'\n'+msg.join('\n')+'\nReputasi '+w.rep+'/10 | SP '+w.sp+'/3',[{l:'Lanjut',f:()=>pickOfficeEvent()}]);
+}
+function doFire(msg,line){
+  const w=S.work,pes=Math.round(w.sal*(w.scandal?0:.5)/50000)*50000;
+  w.fired=2;w.sp=0;S.money+=pes;offStress(12);
+  show({k:'lose'},(msg.length?msg.join('\n')+'\n':'')+line+(pes?' Pesangon '+rp(pes)+'.':' Tidak ada pesangon.')+'\nSelama menganggur kamu bisa mencari kerja lewat menu Lainnya.',[{l:'Lanjut',f:()=>monthEvent()}]);
+}
+function pickOfficeEvent(){
+  const w=S.work;
+  if(w.aff>=3&&Math.random()<.2+.07*(w.m-w.affM))return evDiscovered();
+  const pool=[['pol',3],['boss',3],['bully',2],['gosip',(S.evil+S.crime>0||w.aff>=3)?3:1],['ethic',2]];
+  if(w.aff===0&&w.m>=2)pool.push(['aff0',3]);if(w.aff===1)pool.push(['aff1',4]);if(w.aff===2)pool.push(['aff2',4]);
+  if(w.rep>=6&&w.m>=3)pool.push(['hh',3]);
+  const tot=pool.reduce((a,x)=>a+x[1],0);let r=Math.random()*tot,k=pool[0][0];for(const x of pool){r-=x[1];if(r<=0){k=x[0];break;}}
+  ({pol:evPolitik,boss:evBoss,bully:evBully,gosip:evGosip,ethic:evEthic,aff0:()=>evAff(0),aff1:()=>evAff(1),aff2:()=>evAff(2),hh:evHeadhunter})[k]();
+}
+function evPolitik(){
+  show({k:'room',who:'hrd'},'Rekan satu divisi, Bagas, menyodorkan laporanmu ke atasan seolah hasil kerjanya sendiri dan dipuji di rapat.',[
+    {l:'Konfrontasi Bagas di depan umum',f:()=>{if(Math.random()<.45){repAdd(1);evDone('Atasan melihat buktinya dan Bagas ditegur. Reputasimu naik.');}else{repAdd(-1);offStress(8);evDone('Kamu dicap emosional dan Bagas pandai memutarbalikkan keadaan.');}}},
+    {l:'Kumpulkan bukti, lapor ke atasan',f:()=>{offStress(3);if(Math.random()<.65){repAdd(2);evDone('Buktimu rapi. Atasan menghargai kejujuranmu.');}else{repAdd(-1);evDone('Atasan enggan ikut campur dan menyuruhmu menyelesaikan sendiri.');}}},
+    {l:'Diam saja',f:()=>{offStress(10);repAdd(-1);evDone('Kamu menelan kekesalan. Bagas makin berani.');}}]);
+}
+function evBoss(){
+  show({k:'room',who:'hrd'},'Atasan menumpuk tugas dan menyuruhmu lembur sampai malam tanpa bayaran.',[
+    {l:'Terima dan kerjakan',f:()=>{offStress(8);repAdd(1);evDone('Kamu pulang larut. Atasan puas tapi badanmu lelah.');}},
+    {l:'Tolak dengan sopan',f:()=>{if(Math.random()<.4){repAdd(-1);w2sp(1);evDone('Atasan tersinggung dan mencatat penolakanmu.');}else{evDone('Atasan mengerti dan memberi tenggat lain.');}}},
+    {l:'Pura-pura sakit',f:()=>{if(Math.random()<.3){repAdd(-2);w2sp(1);evDone('Kebohonganmu ketahuan karena fotomu di media sosial.');}else{offStress(-4);evDone('Kamu lolos dan sempat istirahat.');}}}]);
+}
+function w2sp(n){const w=S.work;w.sp+=n;if(w.sp>=3)return doFire([],'Surat peringatan ketiga membuatmu dipecat.');}
+function evBully(){
+  show({k:'room',who:'hrd'},'Seorang senior memperlakukanmu semena-mena: menyuruh ini itu dan menyalahkanmu di depan tim.',[
+    {l:'Lawan balik dengan tegas',f:()=>{if(Math.random()<.5){repAdd(1);evDone('Senior itu terdiam dan mulai segan padamu.');}else{repAdd(-1);offStress(6);evDone('Situasi memanas dan kamu ikut dipanggil HRD.');}}},
+    {l:'Lapor ke HRD',f:()=>{if(Math.random()<.6){repAdd(1);evDone('HRD menindaklanjuti. Senior itu mendapat peringatan.');}else{offStress(5);evDone('HRD hanya mencatat dan tidak ada tindakan berarti.');}}},
+    {l:'Telan saja',f:()=>{offStress(10);evDone('Kamu bertahan, tapi hatimu makin berat setiap pergi kerja.');}}]);
+}
+function evGosip(){
+  show({k:'lobby',j:wjIdx()},'Gosip tentang dirimu beredar di grup WhatsApp kantor.',[
+    {l:'Klarifikasi langsung ke atasan',f:()=>{if(Math.random()<.55){evDone('Atasan percaya penjelasanmu. Gosip mereda.');}else{repAdd(-1);offStress(6);evDone('Klarifikasimu malah memicu gosip baru.');}}},
+    {l:'Abaikan',f:()=>{offStress(6);if(Math.random()<.35)repAdd(-1);evDone('Kamu pura-pura tidak peduli sampai topik berganti.');}}]);
+}
+function evEthic(){
+  show({k:'room',who:'hrd'},'Seorang vendor menawarkan komisi Rp 1,5jt jika kamu membocorkan harga penawaran kompetitor.',[
+    {l:'Terima (+Rp 1,5jt)',f:()=>{S.money+=1500000;S.evil++;if(Math.random()<.25){S.work.scandal=true;return doFire([],'Praktik curangmu terbongkar dan kamu dipecat dengan tidak hormat.');}evDone('Uang masuk dan tidak ada yang curiga. Hati kecilmu tidak tenang.');}},
+    {l:'Tolak dan laporkan',f:()=>{repAdd(1);evDone('Kamu menolak. Integritasmu dihargai atasan.');}}]);
+}
+function evAff(st){
+  const w=S.work;
+  const t=['Dinda, rekan satu divisi yang sudah menikah, mengajakmu makan siang dan curhat soal rumah tangganya yang dingin.','Dinda semakin sering mengobrol denganmu lewat pesan malam hari dan mengajak pulang bareng.','Dinda mengajakmu bertemu di luar kantor, dan kamu tahu batasnya sudah sangat tipis.'][st];
+  const yes=['Dengarkan dan temani','Lanjut dekat','Ya, temui dia'][st];
+  show({k:'lobby',j:wjIdx()},t,[
+    {l:yes,f:()=>{w.aff=st+1;if(st===2){w.affM=w.m;}offStress(-6);evDone(st<2?'Kamu merasa nyaman. Kedekatan kalian jadi bahan lirikan rekan lain.':'Kalian menjalin hubungan terlarang. Sementara menyenangkan, tapi risikonya besar.');}},
+    {l:'Jaga jarak, tetap profesional',f:()=>{w.aff=-1;repAdd(st===0?0:1);evDone('Kamu menarik diri dengan sopan. Dinda mengerti, hubungan tetap profesional.');}}]);
+}
+function evDiscovered(){
+  const w=S.work;
+  show({k:'door',who:'tet'},'Suami Dinda mendatangi kantor dan membuat keributan di lobi di depan semua orang. Hubungan terlarangmu terbongkar.',[
+    {l:'Minta maaf dan akhiri semuanya',f:()=>{w.aff=-2;w.scandal=true;repAdd(-3);offStress(15);if(Math.random()<.4)return doFire([],'HRD memutuskan memecatmu karena melanggar etika kantor.');w2sp(1);if(S.work.fired>0)return;evDone('Kamu menerima Surat Peringatan dan dicap buruk di kantor.');}},
+    {l:'Hadapi dengan emosi (adu jotos)',f:()=>startFight({who:'tet',bg:'door',hp:7,windT:.7,onEnd:won=>{w.aff=-2;w.scandal=true;repAdd(-3);offStress(15);if(!won)S.energy=Math.max(0,S.energy-15);doFire([],'Keributan itu membuatmu dipecat seketika.');}})},
+    {l:'Pura-pura tidak tahu, bantah',f:()=>{w.aff=-2;w.scandal=true;if(Math.random()<.6){repAdd(-3);return doFire([],'Bukti percakapanmu beredar. Kamu dipecat.');}repAdd(-2);offStress(12);evDone('Kamu lolos tanpa bukti, tapi gosip kotor menempel padamu.');}}]);
+}
+function evHeadhunter(){
+  const w=S.work,cands=JOBS.filter(j=>j.id!==w.job&&j.sal>=w.sal*.9);
+  if(!cands.length)return evDone('Seorang rekruter menghubungimu, tapi tidak ada posisi yang lebih baik saat ini.');
+  const j=cands[Math.floor(Math.random()*cands.length)],ns=Math.max(j.sal,Math.round(w.sal*1.25/50000)*50000);
+  show({k:'room',who:'dir'},'Seorang rekruter menawarimu posisi '+j.pos+' di '+j.name+' dengan gaji '+rp(ns)+' (naik dari '+rp(w.sal)+').',[
+    {l:'Terima dan pindah',f:()=>{w.job=j.id;w.sal=ns;w.rep=5;w.sp=0;if(w.aff>0)w.aff=-2;w.switched++;evDone('Kamu resign dengan baik-baik dan mulai bekerja di '+j.name+'.');}},
+    {l:'Tolak, tetap di sini',f:()=>evDone('Kamu menolak. Reputasimu di kantor lama tetap stabil.')}]);
 }
 function monthEvent(){
   const w=S.work,next=()=>{save();workMonth();};
