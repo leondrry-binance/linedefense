@@ -749,9 +749,9 @@ function drawBG(){
   const lx=-S.cam;
   if(lx>-600){
     decoLeft(lx-S.crowdBack);
-    {const n=Math.ceil(S.lives/20*9),T=S.time,KS=['pria','wanita','pria','wanita','pria','wanita'];
-     for(let l=0;l<3;l++)for(let j=0;j<3;j++){const idx=l*3+j;if(idx>=n)continue;const key=KS[(l+j)%6],A=ATL[key];if(!A||!A.ok)continue;const I=A.i,wv=Math.sin(T*4+idx*1.9)>.55;
-       sprAt(key,lx-S.crowdBack+8+j*15,LANEY[l]+12+(j%2)*5,58,wv?I.atk[0]:I.idle,false);}}
+    {const n=Math.ceil(S.lives/20*24),T=S.time,KS=['pria','wanita','pria','pria','wanita','wanita','pria'];
+     for(let l=0;l<3;l++)for(let j=0;j<8;j++){const idx=l*8+j;if(idx>=n)continue;const key=KS[(l+j)%7],A=ATL[key];if(!A||!A.ok)continue;const I=A.i,wv=Math.sin(T*4+idx*1.9)>.55,row=j>=4?1:0;
+       sprAt(key,lx-S.crowdBack+8+(j%4)*17+row*9,LANEY[l]+4+row*12+(j%2)*4,56,wv?I.atk[0]:I.idle,false);}}
   }
   // sisi kanan
   if(S.stage<5){ctx.fillStyle='#2e2438';ctx.fillRect(WW-170-S.cam,GYT-40,200,WH);}
