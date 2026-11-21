@@ -252,7 +252,7 @@ function callUpdate(dt){
       if(car.sp<=0){car.sp=1.1;S.fx.push({text:pick(['MERDEKA!','TURUNKAN HARGA!','TURUNKAN BBM!','RAKYAT BERSATU!','DENGARKAN KAMI!','BBM JANGAN NAIK!']),x:car.x-40,y:car.y-125,life:1,max:1,col:'#ff8fb8'});
         S.units.forEach(o=>{if(o.team===0&&!o.dying&&!o.riding&&Math.abs(o.x-car.x)<300){giveBuff(o,o.type==='prajurit'?1.6:1.3,3);}});}
       if(car.t>=9){car.st='out';car.t=0;
-        car.cargo.forEach((u,i)=>{u.riding=false;u.atk=0;u.oy=rnd(-20,20);u.x=clamp(car.x-20-i*24-rnd(0,30),4,WW-4);u.y=LANEY[u.lane]+u.oy;});sfx('spawn');}
+        car.cargo.forEach((u,i)=>{camFocus(car.x-60,1.6);u.riding=false;u.atk=0;u.oy=rnd(-20,20);u.x=clamp(car.x-20-i*24-rnd(0,30),4,WW-4);u.y=LANEY[u.lane]+u.oy;});sfx('spawn');}
     }else if(car.st==='out'){car.x-=230*dt;if(car.x<-170)car.dead=1;}
   }
   S.cars=S.cars.filter(c=>!c.dead);
@@ -576,10 +576,10 @@ function policeSkills(dt){
     if(grp.length>=5&&poli.length&&lead>700){
       if(P.smoke<=0){
         const cx=grp.reduce((a,u)=>a+u.x,0)/grp.length,th=poli.reduce((b,o)=>Math.abs(o.x-cx)<Math.abs(b.x-cx)?o:b);
-        if(th.x>cx&&th.x-cx<560){S.smokes.push({x:th.x-10,y:th.y-34,tx:cx,ty:LANEY[1],ph:0,fly:.7,life:6.5,seed:Math.random()*9});P.smoke=34;P.cannon=Math.max(P.cannon,5);
+        if(th.x>cx&&th.x-cx<560){camFocus(cx,2.2);S.smokes.push({x:th.x-10,y:th.y-34,tx:cx,ty:LANEY[1],ph:0,fly:.7,life:6.5,seed:Math.random()*9});P.smoke=34;P.cannon=Math.max(P.cannon,5);
           tvShow('R','polisi','marah','BOM ASAP DILEMPAR!','Massa diam & kocar-kacir');tvShow('L','bewok','kaget','UHUK! GAS!','Mundur dulu!');sfx('boom');}
       }else if(P.cannon<=0&&!S.cannons.length&&grp.length>=6){
-        S.cannons.push({x:Math.min(WW-40,lead+620),y:LANEY[1]+4,ph:'in',t:0,tick:0});P.cannon=52;
+        camFocus(lead+120,2.4);S.cannons.push({x:Math.min(WW-40,lead+620),y:LANEY[1]+4,ph:'in',t:0,tick:0});P.cannon=52;
         tvShow('R','polisi','siaga','WATER CANNON MAJU!','Massa dipukul mundur');toast('Poli kerahkan water cannon!');sfx('spawn');
       }
     }
@@ -622,12 +622,24 @@ function endGame(win){
 const fmt=t=>Math.floor(t/60)+':'+String(Math.floor(t%60)).padStart(2,'0');
 
 /* ---------- kamera ---------- */
+function camFocus(x,t){if(S)S.camEv={x,t:t||1.8};}
 function camUpdate(dt){
   if(S.follow&&!camDrag){
-    let fx=0,n=0;for(const u of S.units)if(u.team===0&&!u.dying){if(u.x>fx)fx=u.x;n++;}
-    const front=S.units.filter(u=>u.team===0&&!u.dying).sort((a,b)=>b.x-a.x).slice(0,3);
-    const tx=front.length?front.reduce((a,u)=>a+u.x,0)/front.length:0;
-    const want=clamp(tx-VW*.38,0,WW-VW);S.cam+=(want-S.cam)*Math.min(1,dt*2.5);
+    const att=S.units.filter(u=>u.team===0&&!u.dying&&!u.riding).sort((a,b)=>b.x-a.x);
+    const front=att.slice(0,3);
+    const lead=front.length?front.reduce((a,u)=>a+u.x,0)/front.length:0;
+    // musuh terdekat di depan pasukan = titik kontak
+    let foe=null,fd=1e9;
+    for(const o of S.units){if(o.team!==1||o.dying>0||o.d.boss&&false)continue;const d=o.x-lead;if(d>-80&&d<fd){fd=d;foe=o;}}
+    let tx=lead,rate=2.5,bias=.38;
+    if(foe&&fd<520){ // sedang bertempur: bingkai dua sisi, geser lebih cepat
+      tx=lead+(foe.x-lead)*.55;bias=.5;rate=4.5;
+      const nb=S.units.filter(u=>u.team===1&&!u.dying&&Math.abs(u.x-foe.x)<260).length;if(nb>=5)rate=5.5;
+    }
+    if(S.camEv&&S.camEv.t>0){S.camEv.t-=dt;tx=S.camEv.x;bias=.5;rate=6.5;}
+    const want=clamp(tx-VW*bias,0,WW-VW);
+    const far=Math.abs(want-S.cam)>VW*.6?1.8:1;
+    S.cam+=(want-S.cam)*Math.min(1,dt*rate*far);
   }
   S.cam=clamp(S.cam,0,Math.max(0,WW-VW));
 }
@@ -700,7 +712,7 @@ function decoLeft(lx){
   // ---- pendukung berkerumun di belakang
   {const C=[[134,'wanita',0],[150,'pria',1],[166,'pria',0],[186,'wanita',1],[198,'pria',0],[232,'wanita',1],[246,'pria',1],[282,'wanita',1],[352,'pria',1],[384,'wanita',1],[214,'pria',1],[262,'wanita',0],[300,'pria',1],[322,'pria',0],[346,'wanita',1],[372,'pria',0],[396,'wanita',0]];
    C.forEach(([cx,key,fl],i)=>{const A=ATL[key];if(!A||!A.ok)return;const I=A.i,wv=Math.sin(T*4+i*2.1)>.5,yb=b+(i%3)*6-2;
-     sprAt(key,lx+cx,yb,70,wv?I.atk[0]:I.idle,fl);
+     sprAt(key,lx+cx,yb,95,wv?I.atk[0]:I.idle,fl);
      if(i%3===0){R(lx+cx-9,yb-84-(wv?3:0),18,11,'#f4efe0');R(lx+cx-1,yb-74,2,12,'#7a5a30');R(lx+cx-7,yb-82-(wv?3:0),14,2,'#c0392b');R(lx+cx-7,yb-78-(wv?3:0),10,2,'#c0392b');}});}
   // tenda makan pedagang kaki lima
   {const x=lx+420;R(x,b-4,64,4,'#00000033');R(x+4,b-46,3,46,'#6a4a2a');R(x+57,b-46,3,46,'#6a4a2a');
@@ -748,21 +760,38 @@ function drawBG(){
   // sisi kiri: belakang penyerang
   const lx=-S.cam;
   if(lx>-600){
+    {const n=Math.ceil(S.lives/20*18),T=S.time,KS=['pria','wanita','pria','pria','wanita','wanita','pria'];
+     for(let l=0;l<3;l++)for(let j=0;j<6;j++){const idx=l*6+j;if(idx>=n)continue;const key=KS[(l+j)%7],A=ATL[key];if(!A||!A.ok)continue;const I=A.i,wv=Math.sin(T*4+idx*1.9)>.55,row=j>=3?1:0;
+       sprAt(key,lx-S.crowdBack+18+(j%3)*30+row*14,LANEY[l]+2+row*14+(j%2)*4,95,wv?I.atk[0]:I.idle,false);}}
     decoLeft(lx-S.crowdBack);
-    {const n=Math.ceil(S.lives/20*24),T=S.time,KS=['pria','wanita','pria','pria','wanita','wanita','pria'];
-     for(let l=0;l<3;l++)for(let j=0;j<8;j++){const idx=l*8+j;if(idx>=n)continue;const key=KS[(l+j)%7],A=ATL[key];if(!A||!A.ok)continue;const I=A.i,wv=Math.sin(T*4+idx*1.9)>.55,row=j>=4?1:0;
-       sprAt(key,lx-S.crowdBack+8+(j%4)*17+row*9,LANEY[l]+4+row*12+(j%2)*4,56,wv?I.atk[0]:I.idle,false);}}
+    {const T=S.time,k=Math.floor(T/2.3),l=k%3,pp=(T/2.3)%1;if(S.lives>0&&pp<.75){const tx=['LAWAN!','SEMANGAT!','HIDUP RAKYAT!','JANGAN MUNDUR!','TURUNKAN BBM!'][k%5];bubbleAt(lx-S.crowdBack+40,LANEY[l]-50,tx,'#ffe066');}}
   }
   // sisi kanan
   if(S.stage<5){ctx.fillStyle='#2e2438';ctx.fillRect(WW-170-S.cam,GYT-40,200,WH);}
-  else drawDeprImg();
+  else{drawDeprImg();drawGate();}
+}
+function drawGate(){
+  const c=S.core;if(c.gone)return;
+  const x0=WW-372-S.cam,open=coreOpen(),fl=c.flash>0,by=322;
+  const iron=fl?'#fff':'#15171d',gold=fl?'#fff':'#d9a82b',gx=x0+186;
+  ctx.globalAlpha=.25;ctx.fillStyle='#000';ctx.fillRect(x0,by,372,4);ctx.globalAlpha=1;
+  // rel
+  ctx.fillStyle=iron;ctx.fillRect(x0,by-26,372,3);ctx.fillRect(x0,by-8,372,3);
+  // jeruji pagar
+  for(let x=x0;x<x0+372;x+=9){if(x>gx-44&&x<gx+44)continue;ctx.fillStyle=iron;ctx.fillRect(x,by-34,3,34);ctx.fillStyle=gold;ctx.beginPath();ctx.moveTo(x-1,by-34);ctx.lineTo(x+1.5,by-41);ctx.lineTo(x+4,by-34);ctx.fill();}
+  // tiang gerbang
+  for(const px of[gx-48,gx+42]){ctx.fillStyle=iron;ctx.fillRect(px,by-58,7,58);ctx.fillStyle=gold;ctx.fillRect(px-1,by-62,9,5);ctx.beginPath();ctx.arc(px+3.5,by-66,4.5,0,6.28);ctx.fill();}
+  // daun gerbang besi
+  if(!open){for(let x=gx-41;x<gx+42;x+=7){ctx.fillStyle=iron;ctx.fillRect(x,by-50,3,50);ctx.fillStyle=gold;ctx.beginPath();ctx.moveTo(x-1,by-50);ctx.lineTo(x+1.5,by-57);ctx.lineTo(x+4,by-50);ctx.fill();}
+    ctx.fillStyle=iron;ctx.fillRect(gx-41,by-38,82,3);ctx.fillRect(gx-41,by-14,82,3);ctx.fillStyle=gold;ctx.fillRect(gx-3,by-30,6,12);}
+  else{ctx.fillStyle='#ffd166';ctx.font='bold 8px monospace';ctx.textAlign='center';ctx.fillText('GERBANG TERBUKA',gx,by-72);ctx.textAlign='left';}
 }
 const DIMG={};
 function drawDeprImg(){
   const c=S.core,k=c.gone||c.hp<=0?'d':c.hp/c.max>.66?'a':c.hp/c.max>.33?'b':'c';
   if(!DIMG[k]){const im=new Image();im.src=DEPRIMG[k];DIMG[k]=im;}
   const im=DIMG[k];if(!im.complete||!im.naturalWidth)return;
-  const w=372,h=w*DEPRAR,x=WW-w-S.cam,b=268;
+  const w=372,h=w*DEPRAR,x=WW-w-S.cam,b=312;
   if(c.flash>0){ctx.globalAlpha=.8;}
   ctx.drawImage(im,x,b-h,w,h);ctx.globalAlpha=1;
 }
@@ -907,7 +936,7 @@ function drawCore(w){
   R(x-2,y-176,3,44,'#4a3a2a');R(x+1,y-176,26,14,'#e4572e');
   if(open){ctx.strokeStyle='#ffd166';ctx.lineWidth=3;ctx.strokeRect(x-62,y-136,124,138);}}
   ctx.restore();
-  if(w.dying<=0){const by=S.stage>=5?Math.max(VY+22,142):y-226;const bx=S.stage>=5?WW-186:x;R(bx-60,by,120,8,'#000');R(bx-59,by+1,118*w.hp/w.max,6,'#e4572e');ctx.fillStyle='#ffd166';ctx.font='bold 10px monospace';ctx.textAlign='center';ctx.fillText(S.stage>=5?'GEDUNG DEPR':'BENTENG DEPR',bx,by-6);ctx.textAlign='left';}
+  if(w.dying<=0){const by=S.stage>=5?Math.max(VY+22,160):y-226;const bx=S.stage>=5?WW-186:x;R(bx-60,by,120,8,'#000');R(bx-59,by+1,118*w.hp/w.max,6,'#e4572e');ctx.fillStyle='#ffd166';ctx.font='bold 10px monospace';ctx.textAlign='center';ctx.fillText(S.stage>=5?'GEDUNG DEPR':'BENTENG DEPR',bx,by-6);ctx.textAlign='left';}
 }
 function draw(){
   ctx.setTransform(SC,0,0,SC,0,-VY*SC);
