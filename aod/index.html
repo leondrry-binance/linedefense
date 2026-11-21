@@ -48,6 +48,9 @@ button:disabled{opacity:.45;cursor:default}
 .stg{display:flex;gap:4px;justify-content:center;flex-wrap:wrap;margin:8px 0}
 .stg button{width:auto;min-width:44px;padding:10px 22px;font:11px var(--px);white-space:nowrap}
 .stg button.cur{border-color:var(--gold);background:#2a2412}
+.morale-status{flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:6px 4px;border:2px solid var(--line);background:var(--panel);text-align:center;cursor:default}
+.morale-status strong{font-size:12px}.morale-status small{font-size:9px;color:var(--muted)}.morale-bar{display:block;height:5px;width:85%;background:#080c12}.morale-bar i{display:block;height:100%;transition:width .15s}
+@media(orientation:portrait){.morale-status{gap:3px;padding:3px}.morale-status .tl{font-size:9px}.morale-status strong{font-size:12px}.morale-status small{font-size:10px}}
 </style>
 </head>
 <body>
@@ -102,9 +105,9 @@ const DEF={
 };
 const EDEF={
  poli:{name:'Poli',hp:260,dmg:8,range:34,rate:1,sp:40,sc:1.4,rw:10,armor:.8,push:12,body:'#5a6a80',leg:'#33405a',skin:'#e8b88a',hair:'#222',weapon:'sword',shield:1},
- bunda:{name:'Bunda',boss:1,hp:900,dmg:0,range:0,rate:9,sp:30,sc:1.4,rw:200,leak:2,body:'#7a5a2e',leg:'#3a2a14',skin:'#e8b88a',hair:'#2a3a10',weapon:'none'},
+ bunda:{name:'Ratu Pajak',boss:1,hp:900,dmg:0,range:0,rate:9,sp:30,sc:1.4,rw:200,leak:2,body:'#7a5a2e',leg:'#3a2a14',skin:'#e8b88a',hair:'#2a3a10',weapon:'none'},
  tvcrew:{name:'Wartawan TV',hp:140,dmg:0,range:0,rate:9,sp:36,sc:1.4,rw:60,leak:0,body:'#445',leg:'#223',skin:'#e8b88a',hair:'#222',weapon:'none'},
- rajajas:{name:'Raja Jas',boss:1,hp:1600,dmg:0,range:0,rate:9,sp:30,sc:1.4,rw:300,leak:3,body:'#14141a',leg:'#14141a',skin:'#e0b49c',hair:'#4a3020',weapon:'none'}
+ rajajas:{name:'Raja Jawa',boss:1,hp:1600,dmg:0,range:0,rate:9,sp:30,sc:1.4,rw:300,leak:3,body:'#14141a',leg:'#14141a',skin:'#e0b49c',hair:'#4a3020',weapon:'none'}
 };
 const artOf=u=>u.art||ART[u.type];
 const ART={ereporter:'ereporter',ekamera:'ekamera',reporter:'reporter',cameraman:'kamera',prajurit:'pria',pemanah:'wanita',kangbewok:'bewok',rokigirang:'abu',bimo:'bimo',retrobro:'retro',poli:'polisi',tvcrew:'reporter',bunda:'batik',rajajas:'presiden'};
@@ -134,14 +137,14 @@ function initAudio(){if(acx)return;try{acx=new (window.AudioContext||window.webk
 function newGame(n){
   const st=STAGES[n-1];
   S={stage:n,st,time:0,gold:200,lives:20,wave:0,waveT:6,ewT:4,sq:[],units:[],proj:[],fx:[],texts:[],
-     lane:1,plv:0,elv:0,over:false,paused:false,speed:1,follow:true,cam:0,shake:0,uid:0,
+     lane:1,plv:0,elv:0,morale:[50,50],policeBrutal:false,over:false,paused:false,speed:1,follow:true,cam:0,shake:0,uid:0,
      heroes:{},hcd:{},skcd:{},ucd:{},bossF:[false,false],freeze:0,msg:''};
   S.towers=[];S.trains=[];S.news={};S.tv={t:0,text:'',sub:''};S.tvL={t:0};S.tvR={t:0};S.cars=[];S.smokes=[];S.cannons=[];S.pcd={smoke:24,cannon:40};S.crowdBack=0;S.callq=[];S.sqp={};S.ncd={reporter:0,cameraman:0};
   if(USE_TOWERS)for(let l=0;l<3;l++)for(const tx of[TOW_OUT,TOW_IN]){const hp=Math.round(st.tow*(tx===TOW_OUT?1:1.3));S.towers.push({tower:1,team:1,x:tx,lane:l,y:LANEY[l],hp,max:hp,flash:0,dying:0,gone:false,cd:rnd(.5,2),outer:tx===TOW_OUT});}
   S.core={core:1,team:1,x:CORE_X,y:340,hp:st.core,max:st.core,flash:0,dying:0,gone:false,cd:2};
   HEROES.forEach(k=>{S.hcd[k]=0;S.skcd[k]=0;});UNITS.forEach(k=>S.ucd[k]=0);
   for(let l=0;l<3;l++){for(let i=0;i<3;i++){const u=mk('poli',1,TOW_IN-60,l,st.mult,{sq:'g'+l,si:i});u.cd=rnd(0,1);}for(let j=0;j<2;j++){const u=mk('poli',1,TOW_IN-170-j*100,l,st.mult);u.cd=rnd(0,1);}}
-  buildUI();hideOverlay();toast('Stage '+n+': '+st.name);
+  camDrag=null;buildUI();uiRefresh();hideOverlay();toast('Stage '+n+': '+st.name);
 }
 const pmult=()=>1+.25*S.plv;
 const income=()=>6+3*S.elv+(S.news.reporter?4:0)+(S.news.cameraman?3:0);
@@ -161,8 +164,8 @@ function cookAI(u,dt,LN){
     const tg=LN[1][u.lane].filter(o=>o.dying<=0&&o.x>u.x-10).sort((a,b)=>a.x-b.x)[0];
     if(!tg||u.mt<=0){u.mode='back';return;}
     if(Math.abs(tg.x-u.x)>36){walk(tg.x-30,u.sp*1.5);}
-    else{u.atk=.28;ring(tg.x,tg.y,80,'#ff8fb8');
-      hurt(tg,u.dmg*2.4,u);if(tg.dying<=0&&!tg.d.boss){tg.x=clamp(tg.x+80,2,WW-4);tg.stun=Math.max(tg.stun,.9);}
+    else{gainMorale(0);u.atk=.28;ring(tg.x,tg.y,80,'#ff8fb8');
+      hurt(tg,u.dmg*2.4,u);if(tg.dying<=0&&!tg.d.boss){pushUnit(tg,80,u.team);tg.stun=Math.max(tg.stun,.9);}
       S.fx.push({text:pick(['TENDANG!','STOP PELECEHAN!','MINGGIR!','USUT TUNTAS!']),x:u.x-14,y:u.y-u.sc*SPH-10,life:1,max:1,col:'#ff8fb8'});S.shake=Math.max(S.shake,.12);sfx('skill');
       u.rage=rnd(18,24);u.mode='back';}
     return;
@@ -269,11 +272,17 @@ function heroAct(k){
   }
   castSkill(k);
 }
+function girangSpeech(u,strong=false){
+  u.speech=pick(['Bajingan!','Tolol!','Logical Fallacy!','Mana datanya?','Ngawur!','Ad Hominem!']);
+  u.speechTime=strong?1.6:1.0;
+}
 function foesNear(x,r,lane){return S.units.filter(o=>o.team===1&&!o.dying&&Math.abs(o.x-x)<=r&&(lane==null||Math.abs(o.lane-lane)<=1));}
 function castSkill(k){
   const h=S.heroes[k],d=DEF[k];if(!h||h.dying)return;
   if(S.skcd[k]>0){toast(d.skill+': tunggu '+Math.ceil(S.skcd[k])+'d');sfx('err');return;}
   if(h.stun>0)return;
+  if(!HEROES.includes(k)||S.over||S.paused)return;
+  gainMorale(0);
   const dmgBase=h.dmg;
   if(k==='kangbewok'){
     const t=foesNear(h.x+30,110,h.lane);ring(h.x+30,h.y,100,'#58b4e8');h.shield=4;S.shake=.25;
@@ -281,7 +290,7 @@ function castSkill(k){
   }else if(k==='rokigirang'){
     const tx=h.x+170,t=foesNear(tx,110,h.lane);ring(tx,h.y,90,'#ff7a7a');
     t.forEach(o=>hurt(o,110+dmgBase*3,h));
-    S.fx.push({text:pick(['Mana datanya?','Logical Fallacy!','Ad Hominem!','Ngawur!','Strawman!','Dungu!']),x:h.x+40,y:h.y-80,life:1.2,max:1.2,col:'#ff7a7a'});
+    h.atk=.28;girangSpeech(h,true);if(t.length)gainMorale(0,3);
   }else if(k==='bimo'){
     const t=foesNear(h.x,170,h.lane);ring(h.x,h.y,170,'#6be08a');
     t.forEach(o=>{o.conf=3.5;o.slow=4;});floatText(h.x,h.y-70,'Bingung!','#6be08a');
@@ -296,11 +305,26 @@ function newsAct(k){
   if(S.ncd[k]>0){toast(d.name+' pulih '+Math.ceil(S.ncd[k])+'d');sfx('err');return;}
   const fx=newsFront();
   if(tvEnemy())toast('Siaran netral: musuh ikut menonton!');S.news[k]={type:k,team:0,d:{},sc:d.sc,x:Math.max(30,fx-d.off),y:LANEY[0]-14,ph:0,wd:0,mv:0,atk:0,flash:0,dying:0,stun:0,cd:4,hp:k==='reporter'?150:180,max:k==='reporter'?150:180};
-  sfx('spawn');toast(d.name+' mulai meliput!');
+  if(S.policeBrutal){S.policeBrutal=false;toast('Siaran Demo pulih! Kecepatan dan kekuatan Poli kembali normal.');}else toast(d.name+' mulai meliput!');sfx('spawn');
+}
+function policePressure(u){return !!(S&&S.policeBrutal&&!tvPlayer()&&u&&u.team===1&&u.type==='poli');}
+function broadcastLost(team,source){
+  if(!S||S.over||S.paused||!source||source.broadcastLossApplied)return 0;
+  const stillLive=team===0?tvPlayer():S.units.some(o=>o!==source&&o.type==='tvcrew'&&o.team===1&&o.dying<=0);
+  if(stillLive)return 0;
+  source.broadcastLossApplied=true;if(team===0)S.policeBrutal=true;
+  const before=S.morale[team];gainMorale(1-team,10);const loss=before-S.morale[team];
+  floatText(source.x,source.y-85,'Siaran putus! Moral -'+loss,team===0?'#ff8fb8':'#ffd166');
+  return loss;
 }
 function newsHurt(n,d){
   n.hp-=d;n.flash=.12;floatText(n.x,n.y-70,Math.round(d),'#ff6b6b');
-  if(n.hp<=0&&S.news[n.type]===n){delete S.news[n.type];S.ncd[n.type]=25;ring(n.x,n.y,70,'#ff6b6b');burst(n.x,n.y-30,'#fff',12,110);toast(NEWS[n.type].name+' tumbang! Siaran kita mati');sfx('boom');tvShow('L',n.type==='reporter'?'reporter':'kamera','kaget','SIARAN TERPUTUS','Wartawan kita tumbang');tvShow('R','batik','senyum','Wartawan demo tumbang','Berita mereka putus');}
+  if(n.hp<=0&&S.news[n.type]===n){
+    delete S.news[n.type];S.ncd[n.type]=25;const onAir=tvPlayer(),loss=broadcastLost(0,n);
+    ring(n.x,n.y,70,'#ff6b6b');burst(n.x,n.y-30,'#fff',12,110);toast(NEWS[n.type].name+' tumbang! '+(onAir?'Liputan lain masih aktif':'Siaran putus: Demo Morals -'+loss));sfx('boom');
+    tvShow('L',n.type==='reporter'?'reporter':'kamera','kaget',onAir?'LIPUTAN TERGANGGU':'SIARAN TERPUTUS',onAir?'Wartawan lain masih meliput':'Demo Morals -'+loss+' | Poli brutal: maju 2x');
+    tvShow('R','batik','senyum','Wartawan demo tumbang',onAir?'Liputan Demo belum terputus':'Poli maju 2x | damage dan dorongan meningkat');
+  }
 }
 function newsFront(){const f=S.units.filter(u=>u.team===0&&!u.dying&&!u.riding).sort((a,b)=>b.x-a.x).slice(0,3);return f.length?f.reduce((a,u)=>a+u.x,0)/f.length:SPAWNX;}
 const tvEnemy=()=>S.units.some(o=>o.type==='tvcrew'&&o.team===1&&o.dying<=0),tvPlayer=()=>NEWSK.some(k=>S.news[k]),tvAny=()=>tvEnemy()||tvPlayer();
@@ -324,7 +348,7 @@ function newsUpdate(dt){
     const ddx=n.tx-n.x,ddy=n.ty-n.y,dist=Math.hypot(ddx,ddy);
     if(dist>6){const st=Math.min(dist,(tc?72:62)*dt);n.x+=ddx/dist*st;n.y+=ddy/dist*st;n.wd+=st;n.mv=.15;n.team=ddx<0?1:0;}
     n.cd-=dt;
-    if(n.cd<=0){n.cd=d.every;n.atk=.28;
+    if(n.cd<=0){gainMorale(0);n.cd=d.every;n.atk=.28;
       if(k==='reporter'){
         const hl=pick(['BREAKING: Massa makin ramai!','Warga turun ke jalan','Barikade Poli viral di medsos','Aksi damai jadi trending']);
         tvShow('L','reporter',pick(['senyum','serius','tertawa']),hl,'Pejuang semangat +30% | dana +60');S.gold=Math.min(1500,S.gold+60);floatText(n.x,n.y-84,'+60 dana','#f2c14e');
@@ -342,25 +366,97 @@ function newsUpdate(dt){
   for(const k of NEWSK)if(!S.news[k])S.ncd[k]=Math.max(0,S.ncd[k]-dt);
   if(S.tv.t>0)S.tv.t-=dt;S.tvL.t-=dt;S.tvR.t-=dt;
 }
-function buyUp(w){
-  if(!S||S.over||S.paused)return;
-  const lv=w==='p'?S.plv:S.elv,tbl=w==='p'?PUP:EUP;
-  if(lv>=tbl.length){toast('Sudah maksimal');return;}
-  if(S.gold<tbl[lv]){toast('Uang kurang');sfx('err');return;}
-  S.gold-=tbl[lv];if(w==='p'){S.plv++;S.units.forEach(u=>{if(u.team===0&&!u.dying){u.dmg*=(1+.25*S.plv)/(1+.25*(S.plv-1));const r=u.max*(1+.25*S.plv)/(1+.25*(S.plv-1));u.hp+=r-u.max;u.max=r;}});}else S.elv++;
-  sfx('spawn');toast(w==='p'?'Pasukan Lv '+S.plv:'Ekonomi Lv '+S.elv);
+function buyUp(w){return false;} // Legacy API retained; upgrades replaced by morale status.
+
+/* AOD crowd navigation and recoverable boss retreat. */
+function crowdGhost(u){return !!(u.hero||(u.d&&u.d.hero)||u.type==='rajajas'||u.type==='bunda');}
+function crowdBlocks(u,o,dir,gap){return !crowdGhost(u)&&!crowdGhost(o)&&o!==u&&o.team===u.team&&o.dying<=0&&!o.riding&&(o.x-u.x)*dir>0&&(o.x-u.x)*dir<gap&&Math.abs(o.y-u.y)<16;}
+function crowdNavigate(u,dt,LN,gap){
+  if(u.dying>0||u.riding||u.stun>0)return;
+  u.routeWait=Math.max(0,(u.routeWait||0)-dt);
+  const dir=(u.team===0?1:-1)*(u.conf>0?-1:1);
+  if(u.routeWait>0||!S.units.some(o=>o!==u&&o.team===u.team&&o.dying<=0&&!o.riding&&(o.x-u.x)*dir>=0&&(o.x-u.x)*dir<gap(u,o)&&Math.abs(o.y-u.y)<16))return;
+  u.routeWait=.45;
+  // Prefer the upper empty row, then another free row; never teleport through a body.
+  const y=u.y, candidates=[];
+  for(let lane=0;lane<3;lane++)for(const oy of [-16,0,16]){
+    const cy=LANEY[lane]+oy;if(cy<GYT+2||cy>WH-10||Math.abs(cy-y)<14)continue;
+    const occupied=S.units.some(o=>o!==u&&!crowdGhost(o)&&o.dying<=0&&!o.riding&&Math.abs(o.x-u.x)<gap(u,o)+8&&Math.abs(o.y-cy)<18);
+    const pathBlocked=S.units.some(o=>o!==u&&!crowdGhost(o)&&o.dying<=0&&!o.riding&&Math.abs(o.x-u.x)<18&&o.y>Math.min(y,cy)+5&&o.y<Math.max(y,cy)-5);
+    if(!occupied&&!pathBlocked)candidates.push({lane,oy,cy,score:Math.abs(cy-y)+(cy>y?140:0)});
+  }
+  candidates.sort((a,b)=>a.score-b.score);
+  if(!candidates.length)return;
+  const next=candidates[0],old=LN[u.team][u.lane],i=old.indexOf(u);if(i>=0)old.splice(i,1);
+  u.lane=next.lane;u.oy=next.oy;LN[u.team][u.lane].push(u);
+}
+function bossRecover(u,dt){
+  if(!u.retreating||u.dying>0||u.riding)return false;
+  u.atk=0;u.recoveryQuiet=Math.max(0,(u.recoveryQuiet||0)-dt);
+  const home=WW-75,step=Math.min(Math.max(0,home-u.x),Math.max(55,u.sp*1.8)*dt);
+  u.x=clamp(u.x+step,2,WW-4);u.wd=(u.wd||0)+step;if(step>0)u.mv=.15;
+  if(u.x>=home-2&&u.recoveryQuiet<=0){u.hp=Math.min(u.max,u.hp+u.max*.07*dt);if(u.hp>=u.max*.9){u.retreating=false;u.bcd=Math.max(u.bcd||0,2);}}
+  return true;
+}
+
+/* Shared 100-point morale balance: skills transfer pressure, never HP/damage/income. */
+function gainMorale(team,amount=5){if(!S||S.over||S.paused||!(team===0||team===1)||!Number.isFinite(amount)||amount<=0)return;S.morale[team]=clamp(S.morale[team]+Math.round(amount),0,100);S.morale[1-team]=100-S.morale[team];}
+function moralePush(team){return 1+clamp((S&&S.morale&&S.morale[team])||0,0,100)/100;}
+function pushUnit(target,distance,team,source=null){
+  if(!target||target.dying>0||target.gone||target.riding||target.jump>0||target.tower||target.core)return;
+  target.x=clamp(target.x+(team===0?1:-1)*distance*moralePush(team)*(policePressure(source)?1.5:1),2,WW-4);
+}
+
+/* Boss pressure skills: temporary infighting and morale loss, not instant kills. */
+function narrativeTargets(u){return S.units.filter(o=>o.team===0&&!o.hero&&!o.dying&&!o.riding&&Math.abs(o.x-u.x)<=(tvEnemy()?WW:420));}
+function royalNarrative(u){
+  if(!S||S.over||S.paused||u.dying>0||u.stun>0)return false;
+  const crowd=narrativeTargets(u);if(!crowd.length)return false;
+  gainMorale(1);crowd.forEach(o=>{o.infight=6;o.scuffleCd=.3+(o.id%4)*.1;});
+  u.atk=.28;ring(u.x,u.y,300,'#c6a6ff');
+  S.fx.push({text:'Saya orang biasa makan nasi, hehehe',x:u.x-110,y:u.y-u.sc*SPH-18,life:2.5,max:2.5,col:'#c6a6ff'});
+  tvShow('R','presiden','senyum','Saya orang biasa makan nasi, hehehe','Narasi Raja Jawa: demonstran ribut 6 detik');
+  tvShow('L','bewok','kaget','Jangan terpecah!','Demonstran saling dorong sementara');sfx('skill');return true;
+}
+function taxMorale(u,broadcast,warning){
+  if(!S||S.over||S.paused||u.dying>0||u.stun>0)return false;
+  if(!S.units.some(o=>o.team===0&&!o.dying&&!o.riding&&Math.abs(o.x-u.x)<=(broadcast?WW:230)))return false;
+  const before=S.morale[0];gainMorale(1,warning?6:12);const loss=before-S.morale[0];
+  u.atk=.28;ring(u.x,u.y,120,'#ffd166');
+  floatText(u.x,u.y-u.sc*SPH-26,'NAIKIN PAJAK! Demo Morals -'+loss,'#ffd166');
+  tvShow('R','batik','senyum','RATU PAJAK: Naikin pajak!','Demo Morals -'+loss+' | DEPR +'+loss);
+  tvShow('L','abu','kaget','Moral demonstran turun!','Pajak berulang melemahkan dorongan'+(warning?' | liputan menahan dampak':''));
+  sfx('skill');return true;
+}
+function scuffleUpdate(u,dt){
+  if(!(u.infight>0))return false;
+  u.infight=Math.max(0,u.infight-dt);if(u.infight<=0){u.scuffleCd=0;return false;}
+  if(u.stun>0||u.riding||u.jump>0||u.dying>0)return false;
+  const other=S.units.filter(o=>o!==u&&o.team===u.team&&!o.hero&&!o.dying&&!o.riding&&Math.abs(o.y-u.y)<38).sort((a,b)=>Math.abs(a.x-u.x)-Math.abs(b.x-u.x))[0];
+  if(!other||Math.abs(other.x-u.x)>160)return true;
+  const dx=other.x-u.x,dir=dx===0?(u.id<other.id?1:-1):Math.sign(dx);
+  if(Math.abs(dx)>42){const step=Math.min(Math.abs(dx)-42,u.sp*.7*dt);u.x=clamp(u.x+dir*step,2,WW-4);u.wd=(u.wd||0)+step;u.mv=.15;u.back=dir<0?.15:0;}
+  u.scuffleCd=Math.max(0,(u.scuffleCd||0)-dt);
+  if(Math.abs(dx)<=45&&u.scuffleCd<=0){u.scuffleCd=.8;u.atk=.18;other.hitReact=.10;other.x=clamp(other.x+dir*10*moralePush(0),2,WW-4);floatText(u.x,u.y-55,'Jangan dorong!','#c6a6ff');}
+  return true;
 }
 
 /* ---------- damage ---------- */
 function hurt(t,d,src){
   if(t.dying>0||t.gone)return;
+  if(policePressure(src))d*=1.25;
   if(t.shield>0)d*=.4;
   if(t.d&&t.d.armor)d*=t.d.armor;
-  t.hp-=d;t.flash=.12;floatText(t.x,t.y-(t.tower?85:t.core?130:(t.d?t.d.sc*SPH+14:40)),Math.round(d),t.team===1?'#ffd166':'#ff6b6b');
+  t.hp-=d;t.flash=.07;t.hitReact=.10;floatText(t.x,t.y-(t.tower?85:t.core?130:(t.d?t.d.sc*SPH+14:40)),Math.round(d),t.team===1?'#ffd166':'#ff6b6b');
+  if(src&&src.team!==t.team&&t.hp>0)pushUnit(t,4,src.team,src);
   if(t.hp<=0)die(t,src);
+  else if(t.type==='rajajas'||t.type==='bunda'){
+    t.recoveryQuiet=3;
+    if(t.hp<=t.max*.5&&!t.retreating){t.retreating=true;floatText(t.x,t.y-80,'Mundur: pulihkan HP','#6be08a');}
+  }
 }
 function die(t,src){
-  if(t.type==='tvcrew'&&t.team===1&&!S.units.some(o=>o!==t&&o.type==='tvcrew'&&o.team===1&&o.dying<=0)){tvShow('L','bewok','tertawa','SIARAN TERPUTUS','Wartawan TV musuh tumbang');tvShow('R','batik','kaget','Siaran pertahanan putus','Wartawan TV tumbang');}
+  if(t.type==='tvcrew'&&t.team===1&&!S.units.some(o=>o!==t&&o.type==='tvcrew'&&o.team===1&&o.dying<=0)){const loss=broadcastLost(1,t);tvShow('L','bewok','tertawa','SIARAN DEPR TERPUTUS','DEPR Morals -'+loss+' | Demo +'+loss);tvShow('R','batik','kaget','Siaran pertahanan putus','DEPR Morals turun '+loss);}
   if(t.core||t.tower){t.dying=.7;t.hp=0;S.shake=.5;sfx('boom');burst(t.x,t.y-20,'#c9a46a',24,160);burst(t.x,t.y-30,'#ff7a2a',14,140);
     if(t.core){S.over=true;S.win=true;setTimeout(()=>endGame(true),900);}else floatText(t.x,t.y-80,'Menara runtuh!','#ffd166');
     return;}
@@ -399,7 +495,7 @@ function update(dt){
    for(const k in sqm){const m=sqm[k];if(m.length===3){m.sort((a,b)=>a.x-b.x);if(m[2].x-m[0].x<80&&Math.abs(m[2].oy-m[0].oy)<14&&m.every(o=>!(o.stun>0))){m.forEach(o=>o.grp=1);m[1].grp=2;m[1].gx=(m[0].x+m[1].x+m[2].x)/3;m[1].gf=m.some(o=>o.flash>0);}}}}
   for(const u of S.units){
     if(u.dying>0){u.dying-=dt;continue;}
-    u.flash=Math.max(0,u.flash-dt);u.back=Math.max(0,(u.back||0)-dt);u.atk=Math.max(0,u.atk-dt);u.cd-=dt;u.mv=Math.max(0,(u.mv||0)-dt);u.stun=Math.max(0,u.stun-dt);u.conf=Math.max(0,u.conf-dt);u.slow=Math.max(0,u.slow-dt);u.shield=Math.max(0,u.shield-dt);
+    u.speechTime=Math.max(0,(u.speechTime||0)-dt);u.hitReact=Math.max(0,(u.hitReact||0)-dt);u.flash=Math.max(0,u.flash-dt);u.back=Math.max(0,(u.back||0)-dt);u.atk=Math.max(0,u.atk-dt);u.cd-=dt;u.mv=Math.max(0,(u.mv||0)-dt);u.stun=Math.max(0,u.stun-dt);u.conf=Math.max(0,u.conf-dt);u.slow=Math.max(0,u.slow-dt);u.shield=Math.max(0,u.shield-dt);
     u.y+=(LANEY[u.lane]+(u.oy||0)-u.y)*Math.min(1,dt*6);
     if(u.buff>0){u.buff-=dt;if(u.buff<=0)u.dmg/=(u.bf||1.3);}
     if(u.burn>0){u.burn-=dt;u.bt=(u.bt||0)+dt;if(u.bt>=.5){u.bt=0;hurt(u,3,null);if(u.dying>0)continue;}}
@@ -408,7 +504,11 @@ function update(dt){
       if(u.jump<=0){u.jump=0;ring(u.x,u.y,100,'#ff6b3a');S.shake=.3;foesNear(u.x,110,u.lane).forEach(o=>{hurt(o,130+u.dmg*3,u);o.stun=1;});sfx('boom');}
       continue;
     }
+    const infighting=scuffleUpdate(u,dt);
     if(u.stun>0)continue;
+    if(infighting)continue;
+    if(bossRecover(u,dt))continue;
+    crowdNavigate(u,dt,LN,gp);
     if(u.flee>0){u.flee-=dt;u.x=Math.max(8,u.x-75*dt);u.wd=(u.wd||0)+75*dt;u.mv=.15;u.atk=0;u.back=.2;continue;}
     const dir=u.team===0?1:-1,foe=1-u.team;
     let bt=null,bd=1e9;
@@ -422,8 +522,8 @@ function update(dt){
       if(u.rage<=0){
         const near=LN[foe][u.lane].filter(o=>o.dying<=0&&(o.x-u.x)*dir>-10&&Math.abs(o.x-u.x)<=95);
         if(near.length){
-          u.rage=5;u.atk=.28;u.cd=Math.max(u.cd,.5);
-          near.forEach(o=>{hurt(o,u.dmg*1.3,u);if(o.dying>0)return;if(o.d.boss){o.slow=2;o.x=clamp(o.x+dir*14,2,WW-4);}else{o.x=clamp(o.x+dir*60,2,WW-4);o.stun=Math.max(o.stun,.5);}});
+          gainMorale(u.team);u.rage=5;u.atk=.28;u.cd=Math.max(u.cd,.5);
+          near.forEach(o=>{hurt(o,u.dmg*1.3,u);if(o.dying>0)return;if(o.d.boss){o.slow=2;pushUnit(o,14,u.team);}else{pushUnit(o,60,u.team);o.stun=Math.max(o.stun,.5);}});
           ring(u.x+dir*40,u.y,95,'#ff8fb8');S.fx.push({text:pick(['STOP PELECEHAN!','MUNDUR!','TURUNKAN HARGA!','DENGARKAN KAMI!']),x:u.x-10,y:u.y-u.sc*SPH-10,life:1,max:1,col:'#ff8fb8'});S.shake=Math.max(S.shake,.12);sfx('skill');
         }
       }
@@ -432,6 +532,7 @@ function update(dt){
     if(u.type==='tvcrew'&&u.team===1&&u.x<=2290){
       u.tvt=(u.tvt===undefined?rnd(5,10):u.tvt)-dt;
       if(u.tvt<=0&&S.units.some(o=>o.team===0&&!o.dying)){
+        gainMorale(1);
         const own=tvPlayer(),isR=u.art!=='ekamera';u.atk=.28;
         if(isR){u.tvt=15;const hl=pick(['DEMO RICUH, MASSA ANARKIS!','Aparat tertibkan massa','Pedagang rugi akibat demo','Jalan macet total!']);
           S.units.forEach(o=>{if(o.team===1&&!o.dying&&!o.d.boss&&o.type!=='tvcrew')giveBuff(o,own?1.12:1.25,8);});
@@ -456,31 +557,26 @@ function update(dt){
       u.bcd-=dt;
       if(u.type==='bunda'){
         u.scd=(u.scd||8)-dt;
-        if(u.scd<=0){u.scd=12;if(S.units.filter(o=>o.team===1&&!o.dying).length<70)for(let l=0;l<3;l++){S.sq.push({t:l*.3,team:1,type:'poli',l,m:S.st.mult},{t:.5+l*.3,team:1,type:'poli',l,m:S.st.mult});}floatText(u.x,u.y-u.sc*SPH-26,'uang banyak: panggil Poli!','#ffd166');}
+        if(u.scd<=0){gainMorale(1);u.scd=12;if(S.units.filter(o=>o.team===1&&!o.dying).length<70)for(let l=0;l<3;l++){S.sq.push({t:l*.3,team:1,type:'poli',l,m:S.st.mult},{t:.5+l*.3,team:1,type:'poli',l,m:S.st.mult});}floatText(u.x,u.y-u.sc*SPH-26,'uang banyak: panggil Poli!','#ffd166');}
         u.tvd=(u.tvd||0)-dt;
         if(!tve&&u.tvd<=0&&!S.sq.some(q=>q.type==='tvcrew')){u.tvd=25;callCrew(u.lane,1,.5);floatText(u.x,u.y-u.sc*SPH-40,'panggil wartawan TV','#bfe4ff');}
       }
       if(u.bcd<=0){
         if(u.type==='bunda'){
-          const RG=tv?1e9:230;
-          const pool=S.units.filter(o=>o.team===0&&!o.dying&&!o.riding&&!o.hero&&Math.abs(o.x-u.x)<=RG).sort((a,b)=>Math.abs(a.x-u.x)-Math.abs(b.x-u.x)),vs=pool.slice(0,Math.max(warn?2:3,Math.min(10,Math.ceil(pool.length*(warn&&tv?.24:.4)))));
-          if(pool.length){u.atk=.28;u.bcd=15*rnd(.9,1.2);ring(u.x,u.y,120,'#ffd166');S.fx.push({text:'NAIKIN PAJAK!!',x:u.x-20,y:u.y-u.sc*SPH-14,life:1.2,max:1.2,col:'#ffd166'});if(tv){tvShow('R','batik',pick(['senyum','optimis','serius']),'BUNDA: Naikin pajak!','Sebagian pendukung hilang'+(warn?' (kamera kita menangkap, korban lebih sedikit)':''));tvShow('L','abu','kaget','Pendukung hilang!','Kena pajak');}vs.forEach(o=>{floatText(o.x,o.y-50,'hilang','#ffd166');hurt(o,99999,u);});sfx('skill');}else u.bcd=3;
+          u.bcd=taxMorale(u,tv,warn)?15*rnd(.9,1.2):3;
         }else if(!S.units.some(o=>o.team===0&&!o.dying&&!o.riding)){u.bcd=3;}
         else{
           const polis=S.units.filter(o=>o.type==='poli'&&o.team===1&&o.dying<=0&&!o.intel);
           let ch=Math.random()<.5?'shout':'train';
-          if(ch==='shout'&&!tv)ch=polis.length?'intel':'train';
-          if(ch==='shout'){ // di televisi: damage parah
-            u.bcd=14*rnd(.9,1.2);u.atk=.28;ring(u.x,u.y,300,'#ffffff');S.shake=Math.max(S.shake,.3);sfx('boom');
-            S.fx.push({text:'SAYA AKAN LAWAN!',x:u.x-60,y:u.y-u.sc*SPH-14,life:1.4,max:1.4,col:'#ffffff'});
-            const wf=warn?.5:1;tvShow('R','presiden','serius','RAJA JAS: "Saya akan lawan!"','Pasukan terpukul mundur'+(warn?' (damage separuh)':''));tvShow('L','bewok','marah','Pasukan terpukul!','Kamera kita menangkapnya');
-            S.units.forEach(o=>{if(o.team===0&&!o.dying&&!o.riding){hurt(o,(45*S.st.mult+25)*wf,u);if(o.dying<=0){o.x=clamp(o.x-(o.hero?90:200)*wf,2,WW-4);o.stun=Math.max(o.stun,1*wf);}}});
+          if(ch==='train'&&!tv&&polis.length&&Math.random()<.5)ch='intel';
+          if(ch==='shout'){
+            u.bcd=royalNarrative(u)?14*rnd(.9,1.2):3;
           }else if(ch==='intel'){ // tanpa TV: satu Poli dapat alat sadap + bomb
-            const p=pick(polis);u.bcd=18*rnd(.9,1.2);u.atk=.28;
+            gainMorale(1);const p=pick(polis);u.bcd=18*rnd(.9,1.2);u.atk=.28;
             p.intel=1;p.d=Object.assign({},p.d,{name:'Poli Intel',proj:'boulder',range:170,push:0});p.range=170;p.dmg*=2.5;p.hp*=1.5;p.max*=1.5;
             ring(p.x,p.y,70,'#6be08a');S.fx.push({text:'ALAT SADAP + BOMB!',x:p.x-50,y:p.y-p.sc*SPH-14,life:1.4,max:1.4,col:'#6be08a'});sfx('skill');
           }else{
-            u.bcd=20*rnd(.9,1.2);u.riding=true;u.home=u.x;
+            gainMorale(1);u.bcd=20*rnd(.9,1.2);u.riding=true;u.home=u.x;
             S.trains.push({x:u.x,lane:u.lane,y:LANEY[u.lane],vx:-520,rider:u,hit:{},len:180});
             for(const l of [0,1,2])if(l!==u.lane&&Math.random()<.7)S.trains.push({x:u.x+60+l*30,lane:l,y:LANEY[l],vx:-480,rider:null,hit:{},len:180});
             S.fx.push({text:'WHOOOZZ!',x:u.x-30,y:u.y-u.sc*SPH-14,life:1.2,max:1.2,col:'#ffffff'});S.shake=.3;sfx('boom');continue;
@@ -489,7 +585,7 @@ function update(dt){
       }
     }
     let blk=false;
-    for(const o of LN[u.team][u.lane]){if(o===u||o.dying>0)continue;const dx=(o.x-u.x)*dir;if(dx>0&&dx<gp(u,o)&&Math.abs((o.oy||0)-(u.oy||0))<16){blk=true;break;}}
+    for(const o of LN[u.team][u.lane]){if(o===u||o.dying>0)continue;if(crowdBlocks(u,o,dir,gp(u,o))){blk=true;break;}}
     const dual=!!u.d.mr;
     const eng=bt&&(dual?(bd<=u.d.mr+4||(bd<=u.range+4&&blk)):bd<=u.range+4);
     if(eng){
@@ -503,15 +599,15 @@ function update(dt){
           }else{hurt(bt,u.dmg,u);if(Math.random()<.5)sfx('hit');if(Math.random()<.1&&S.fx.filter(f=>f.text).length<6)S.fx.push({text:pick(u.team===0?['TURUNKAN HARGA!','LAWAN!','MERDEKA!']:['MUNDUR!','BUBAR!','TERTIB!']),x:u.x-24,y:u.y-u.sc*SPH-8,life:1,max:1,col:u.team===0?'#ff8fb8':'#9fb4ff'});} // tongkat
         }else if(dual){
           S.proj.push({x:u.x+dir*10,y:u.y-u.sc*SPH*.55,t:bt,dmg:u.dmg*(u.d.mol?1:.65),team:u.team,kind:u.d.mol?'molotov':'stone',sp:u.d.mol?230:300,src:u});sfx('shot');
-        }else if(u.d.proj){S.proj.push({x:u.x+dir*10,y:u.y-u.sc*SPH*.5,t:bt,dmg:u.dmg,team:u.team,kind:u.d.proj,sp:u.d.proj==='boulder'?260:340,src:u});sfx('shot');}
-        else{hurt(bt,u.dmg,u);if(u.d.push&&bt.d&&!bt.tower&&!bt.core&&!bt.d.boss&&!(bt.jump>0)&&bt.dying<=0)bt.x=clamp(bt.x+dir*u.d.push,2,WW-4);if(Math.random()<.4)sfx('hit');}
+        }else if(u.d.proj){if(u.type==='rokigirang')girangSpeech(u);S.proj.push({x:u.x+dir*10,y:u.y-u.sc*SPH*.5,t:bt,dmg:u.dmg,team:u.team,kind:u.d.proj,sp:u.d.proj==='boulder'?260:340,src:u});sfx('shot');}
+        else{hurt(bt,u.dmg,u);if(u.d.push&&bt.d&&!bt.tower&&!bt.core&&!bt.d.boss&&!(bt.jump>0)&&bt.dying<=0)pushUnit(bt,u.d.push,u.team,u);if(Math.random()<.4)sfx('hit');}
       }
     }else{
       const mdir=u.conf>0?-dir:dir;
       let blocked=false;
-      for(const o of LN[u.team][u.lane]){if(o===u||o.dying>0)continue;const dx=(o.x-u.x)*mdir;if(dx>0&&dx<gp(u,o)&&Math.abs((o.oy||0)-(u.oy||0))<16){blocked=true;break;}}
+      for(const o of LN[u.team][u.lane]){if(o===u||o.dying>0)continue;if(crowdBlocks(u,o,mdir,gp(u,o))){blocked=true;break;}}
       let hf=1;if(u.team===1){const hx=u.d.boss?1860:u.type==='tvcrew'?2040:1830;if(u.x<=hx){hf=(u.d.boss||u.type==='tvcrew')?0:(LN[0][u.lane].some(o=>Math.abs(o.x-u.x)<320)?0:.3);}}
-      if(!blocked&&hf>0){const stp=u.sp*hf*(u.slow>0?.5:1)*dt;u.x+=mdir*stp;u.ph+=dt*u.sp/6;u.wd=(u.wd||0)+stp;u.mv=.15;}
+      if(!blocked&&hf>0){const stp=u.sp*hf*(u.slow>0?.5:1)*(policePressure(u)&&mdir===dir?2:1)*dt;u.x+=mdir*stp;u.ph+=dt*u.sp/6;u.wd=(u.wd||0)+stp;u.mv=.15;}
       u.x=clamp(u.x,2,WW-4);
     }
     if(u.team===1&&u.x<=8){S.lives-=u.d.leak||1;u.dying=.01;u.gone=true;toast(u.d.name+' lolos lewat sisi kiri tanpa pertahanan! -'+(u.d.leak||1)+' nyawa');S.shake=.4;sfx('err');if(S.lives<=0){S.lives=0;S.over=true;S.win=false;setTimeout(()=>endGame(false),700);}}
@@ -534,13 +630,13 @@ function update(dt){
     if(p.d0===undefined)p.d0=Math.max(1,d);p.ay=(p.kind==='stone'||p.kind==='molotov')?Math.sin(Math.PI*clamp(1-d/p.d0,0,1))*26:0;
     if(d<=s+4){p.dead=1;
       if(p.kind==='molotov'&&t.d){ring(tx,t.y,48,'#ff7a2a');burst(tx,t.y-14,'#ff9a3a',12,100);S.units.forEach(o=>{if(o.team===t.team&&!o.dying&&Math.abs(o.x-tx)<44&&o.lane===t.lane){o.burn=2.5;if(o!==t)hurt(o,p.dmg*.4,p.src);}});}
-      if(p.kind==='boulder'){ring(tx,t.y,50,'#c9a46a');S.units.forEach(o=>{if(o.team===t.team&&!o.dying&&Math.abs(o.x-tx)<50&&o.lane===t.lane&&o!==t)hurt(o,p.dmg*.5,p.src);});}hurt(t,p.dmg,p.src);}
+      if(p.kind==='boulder'){ring(tx,t.y,50,'#c9a46a');S.units.forEach(o=>{if(o.team===t.team&&!o.dying&&Math.abs(o.x-tx)<50&&o.lane===t.lane&&o!==t)hurt(o,p.dmg*.5,p.src);});}hurt(t,p.dmg,p.src);if(p.kind==='words'&&p.src&&p.src.type==='rokigirang'&&t.team!==p.src.team&&!t.tower&&!t.core)gainMorale(p.src.team,1);}
     else{p.x+=dx/d*s;p.y+=dy/d*s;}
   }
   S.proj=S.proj.filter(p=>!p.dead);
   for(const T of S.trains){
     T.x+=T.vx*dt;
-    for(const o of S.units){if(o.team!==0||o.dying>0||o.lane!==T.lane||T.hit[o.id]||Math.abs(o.x-T.x)>T.len/2+8)continue;T.hit[o.id]=1;hurt(o,70*S.st.mult+30,null);if(o.dying<=0){o.stun=Math.max(o.stun,.7);o.x=clamp(o.x-50,2,WW-4);}}
+    for(const o of S.units){if(o.team!==0||o.dying>0||o.lane!==T.lane||T.hit[o.id]||Math.abs(o.x-T.x)>T.len/2+8)continue;T.hit[o.id]=1;hurt(o,70*S.st.mult+30,null);if(o.dying<=0){o.stun=Math.max(o.stun,.7);pushUnit(o,50,1);}}
     if(T.x<-T.len){T.dead=1;if(T.rider){const r=T.rider;r.riding=false;r.x=r.home;ring(r.x,r.y,90,'#ffffff');S.fx.push({text:'whooosh!',x:r.x-20,y:r.y-r.sc*SPH-14,life:1,max:1,col:'#ffffff'});}}
   }
   S.trains=S.trains.filter(T=>!T.dead);
@@ -559,9 +655,9 @@ function enemyWave(){
   if(S.units.filter(u=>u.team===1&&!u.dying).length>66){S.ewT=3;S.ew--;return;}
   for(let l=0;l<3;l++){const nf=Math.floor(g/3);for(let k=0;k<nf;k++)for(let i=0;i<3;i++)S.sq.push({t:k*2+i*.05+l*.25,team:1,type:'poli',l,m,sq:'w'+w+'_'+l+'_'+k,si:i});for(let j=0;j<g-nf*3;j++)S.sq.push({t:nf*2+j*.9+l*.25,team:1,type:'poli',l,m});}
   const rl=()=>Math.floor(Math.random()*3),alive=t=>S.units.some(u=>u.type===t&&u.dying<=0)||S.sq.some(q=>q.type===t);
-  if(w>=3&&w%5===3&&!alive('bunda')){S.sq.push({t:2,team:1,type:'bunda',l:rl(),m});toast('BUNDA muncul! Awas pajak!');}
+  if(w>=3&&w%5===3&&!alive('bunda')){S.sq.push({t:2,team:1,type:'bunda',l:rl(),m});toast('RATU PAJAK muncul! Awas pajak!');}
   if((S.sq.some(q=>q.type==='bunda'||q.type==='rajajas'))&&!alive('tvcrew'))callCrew(rl(),m,2.6);
-  if(w>=5&&w%7===5&&!alive('rajajas')){S.sq.push({t:3,team:1,type:'rajajas',l:rl(),m});toast('RAJA JAS muncul! Awas kereta!');}
+  if(w>=5&&w%7===5&&!alive('rajajas')){S.sq.push({t:3,team:1,type:'rajajas',l:rl(),m});toast('RAJA JAWA muncul! Awas kereta!');}
   $('wave').textContent='W'+w;
 }
 
@@ -576,10 +672,10 @@ function policeSkills(dt){
     if(grp.length>=5&&poli.length&&lead>700){
       if(P.smoke<=0){
         const cx=grp.reduce((a,u)=>a+u.x,0)/grp.length,th=poli.reduce((b,o)=>Math.abs(o.x-cx)<Math.abs(b.x-cx)?o:b);
-        if(th.x>cx&&th.x-cx<560){camFocus(cx,2.2);S.smokes.push({x:th.x-10,y:th.y-34,tx:cx,ty:LANEY[1],ph:0,fly:.7,life:6.5,seed:Math.random()*9});P.smoke=34;P.cannon=Math.max(P.cannon,5);
+        if(th.x>cx&&th.x-cx<560){gainMorale(1);camFocus(cx,2.2);S.smokes.push({x:th.x-10,y:th.y-34,tx:cx,ty:LANEY[1],ph:0,fly:.7,life:6.5,seed:Math.random()*9});P.smoke=34;P.cannon=Math.max(P.cannon,5);
           tvShow('R','polisi','marah','BOM ASAP DILEMPAR!','Massa diam & kocar-kacir');tvShow('L','bewok','kaget','UHUK! GAS!','Mundur dulu!');sfx('boom');}
       }else if(P.cannon<=0&&!S.cannons.length&&grp.length>=6){
-        camFocus(lead+120,2.4);S.cannons.push({x:Math.min(WW-40,lead+620),y:LANEY[1]+4,ph:'in',t:0,tick:0});P.cannon=52;
+        gainMorale(1);camFocus(lead+120,2.4);S.cannons.push({x:Math.min(WW-40,lead+620),y:LANEY[1]+4,ph:'in',t:0,tick:0});P.cannon=52;
         tvShow('R','polisi','siaga','WATER CANNON MAJU!','Massa dipukul mundur');toast('Poli kerahkan water cannon!');sfx('spawn');
       }
     }
@@ -594,7 +690,7 @@ function policeSkills(dt){
     c.t+=dt;
     if(c.ph==='in'){const lead=att.length?Math.max(...att.map(u=>u.x)):0;c.x-=60*dt;if(c.x-lead<=300||c.x<1000){c.ph='spray';c.t=0;}}
     else if(c.ph==='spray'){c.tick-=dt;
-      if(c.tick<=0){c.tick=.2;for(const o of att){if(o.x>c.x-36||o.x<c.x-330)continue;const f=o.hero?.4:1;hurt(o,4*S.st.mult*f,null);if(o.dying<=0){o.x=Math.max(10,o.x-16*f);if(!o.hero&&Math.random()<.25)o.stun=Math.max(o.stun,.3);}}}
+      if(c.tick<=0){c.tick=.2;for(const o of att){if(o.x>c.x-36||o.x<c.x-330)continue;const f=o.hero?.4:1;hurt(o,4*S.st.mult*f,null);if(o.dying<=0){pushUnit(o,16*f,1);if(!o.hero&&Math.random()<.25)o.stun=Math.max(o.stun,.3);}}}
       if(c.t>8)c.ph='out';}
     else{c.x+=80*dt;if(c.x>WW+80)c.dead=true;}
   }
@@ -823,7 +919,7 @@ function sprUnit(u,y){
   const H=SPH*u.sc*1,k=H/A.H,dir=u.team===0?1:-1,I=A.i;
   let fi=I.idle;
   if(u.dying>0&&I.ko>=0)fi=I.ko;
-  else if(u.stun>0&&I.hit>=0)fi=I.hit;
+  else if(u.hitReact>0&&I.hit>=0)fi=I.hit;
   else if(u.atk>0){const p=1-u.atk/.28,n=I.atk.length;fi=I.atk[Math.min(n-1,Math.floor(p*n))];}
   else if(u.mv>0)fi=I.walk[Math.floor((u.wd||0)/(H*.22))%4];
   if(u.grp===1&&u.dying<=0)return H;
@@ -854,8 +950,13 @@ function drawUnit(u){
   ctx.restore();
   if(u.type==='pemanah'&&u.team===0&&u.cooking&&u.dying<=0){const px=u.x+22,py=y;R(px-9,py-4,18,3,'#ff9a2e');R(px-8,py-15,16,12,'#2c2c34');R(px-10,py-17,20,3,'#55555f');for(let i=0;i<3;i++){ctx.globalAlpha=.5;ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(px-5+i*5+Math.sin(S.time*3+i)*2,py-24-((S.time*18+i*7)%16),2.2,0,6.28);ctx.fill();ctx.globalAlpha=1;}}
   const top=ht||u.sc*28;
+  if(u.speechTime>0&&u.speech){
+    ctx.font='bold 10px monospace';const half=ctx.measureText(u.speech).width/2+7;
+    bubbleAt(clamp(u.x,S.cam+half+3,S.cam+VW-half-3),Math.max(VY+6,y-top-29),u.speech,'#ff7a7a');
+  }
   ctx.save();
   if(u.dying>0&&!tryS){ctx.globalAlpha=Math.max(0,u.dying/.55);}
+  if(u.infight>0){ctx.fillStyle='#c6a6ff';ctx.font='bold 10px monospace';ctx.fillText('RIBUT',u.x-16,y-top-12);}
   if(u.conf>0){ctx.fillStyle='#ffe066';ctx.font='bold 12px monospace';ctx.fillText('?',u.x-3,y-top-8);}
   if(u.shield>0){ctx.strokeStyle='#58b4e8';ctx.lineWidth=2;ctx.beginPath();ctx.arc(u.x,y-top*.45,top*.5,0,6.28);ctx.stroke();}
   if(u.burn>0&&u.dying<=0){for(let i=0;i<3;i++){ctx.fillStyle=i%2?'#ffd24a':'#ff6a1a';const fx=u.x+Math.sin(S.time*9+i*2)*6,fy=y-top*(.3+.25*i)-Math.abs(Math.sin(S.time*12+i))*5;ctx.fillRect(Math.round(fx-2),Math.round(fy-3),4,6);}}
@@ -883,12 +984,17 @@ function drawNews(n){
   R(n.x-17,n.y-ht-3,34,4,'#000');R(n.x-16,n.y-ht-2,32*Math.max(0,n.hp/n.max),2,'#5fd18a');
   if(n.atk>0){ctx.fillStyle='#ff3b3b';ctx.fillRect(Math.round(n.x+10),Math.round(n.y-ht-2),12,6);ctx.fillStyle='#fff';ctx.font='bold 5px monospace';ctx.fillText('LIVE',n.x+11,n.y-ht+3);}
 }
+function broadcastStatus(side){
+  const online=side==='L'?tvPlayer():tvEnemy();
+  return {online,text:online?'ONLINE':'OFFLINE',color:online?'#5fd18a':'#ff6b6b'};
+}
 function drawTVp(p,x,y,w,h,side){
-  if(!p||p.t<=0)return;const a=Math.min(1,p.t*2);
+  const status=broadcastStatus(side),a=1;
+  if(!p||!(p.t>0))p={who:side==='L'?'reporter':'polisi',expr:status.online?(side==='L'?'senyum':'siaga'):'kaget',text:status.online?'Liputan berlangsung':'Tidak ada siaran',sub:status.online?'Kru aktif meliput':'Lindungi / pulihkan kru siaran'};
   ctx.save();ctx.globalAlpha=a;
   R(x-2,y-2,w+4,h+4,'#000');R(x,y,w,h,'#10243a');R(x,y,w,10,side==='L'?'#1f6feb':'#c0392b');
   ctx.fillStyle='#fff';ctx.font='bold 7px monospace';ctx.fillText((side==='L'?'TV DEMONSTRAN':'TV PERTAHANAN'),x+4,y+8);
-  if(Math.floor(S.time*2)%2)R(x+w-10,y+3,4,4,'#fff');
+  R(x+w-53,y+1,51,8,'#10151d');ctx.fillStyle=status.color;ctx.font='bold 7px monospace';ctx.textAlign='right';ctx.fillText(status.text,x+w-5,y+8);ctx.textAlign='left';
   const fs=h-18,fx0=x+4,fy0=y+13;R(fx0-1,fy0-1,fs+2,fs+2,'#fff');
   const im=faceImg(p.who,p.expr);
   if(im&&im.complete&&im.naturalWidth){ctx.save();ctx.beginPath();ctx.rect(fx0,fy0,fs,fs);ctx.clip();ctx.imageSmoothingEnabled=true;const bob=Math.sin(S.time*10)*1.2;ctx.drawImage(im,fx0-2,fy0-2+bob,fs+4,fs+4);ctx.restore();}
@@ -897,6 +1003,8 @@ function drawTVp(p,x,y,w,h,side){
   ctx.fillStyle='#ffe066';ctx.font='bold 8px monospace';let yy=wrap(p.text,y+22,9);
   ctx.fillStyle='#bfe4ff';ctx.font='7px monospace';wrap(p.sub,yy+9,8);
   ctx.globalAlpha=a*.12;for(let i=0;i<h;i+=3)R(x,y+i,w,1,'#000');
+  ctx.globalAlpha=1;R(x-2,y+h,w+4,16,'#000');R(x,y+h,w,14,'#10151d');
+  ctx.fillStyle=status.color;ctx.font='bold 10px monospace';ctx.textAlign='center';ctx.fillText(status.text,x+w/2,y+h+11);ctx.textAlign='left';
   ctx.restore();
 }
 function drawTV(){
@@ -1001,7 +1109,7 @@ function buildUI(){
   const rn=$('rNews');rn.innerHTML='';
   rn.style.display='none';
   const rp=$('rUp');rp.innerHTML='';
-  [['p','Pasukan'],['e','Ekonomi']].forEach(([w,n])=>{const b=document.createElement('button');b.id='up_'+w;b.onclick=()=>buyUp(w);rp.appendChild(b);});
+  [['p','Demo Morals'],['e','DEPR Morals']].forEach(([w,n])=>{const b=document.createElement('div');b.id='up_'+w;b.className='morale-status';b.setAttribute('role','status');b.setAttribute('aria-label',n);rp.appendChild(b);});
   refreshIcons();uiRefresh(true);
 }
 addEventListener('resize',()=>{try{refreshIcons();}catch(e){}});
@@ -1024,15 +1132,17 @@ function uiRefresh(force){
     else if(S.ncd[k]>0){html='<b>['+d.key+'] '+d.name+'</b>Pulih '+Math.ceil(S.ncd[k])+'d';b.className='hero';b.disabled=true;}
     else{html='<b>['+d.key+'] '+d.name+'</b>Panggil '+d.cost;b.className='hero';b.disabled=S.gold<d.cost;}
     if(b.innerHTML!==html)b.innerHTML=html;});
-  const up=(w,n,lv,tbl)=>{const b=$('up_'+w);b.innerHTML='<span class="tl">'+n+' Lv'+lv+'</span><br>'+(lv>=tbl.length?'MAX':tbl[lv]);b.disabled=lv>=tbl.length||S.gold<tbl[lv];};
-  up('p','Pasukan',S.plv,PUP);up('e','Ekonomi',S.elv,EUP);
-  $('bCam').style.borderColor=S.follow?'#6bbf59':'';$('bPause').textContent=S.paused?'>':'||';$('bSpd').textContent='x'+S.speed;
+  [['p','Demo Morals',0],['e','DEPR Morals',1]].forEach(([w,label,team])=>{
+    const value=S.morale[team],b=$('up_'+w);
+    b.innerHTML='<span class="tl">'+label+'</span><strong>'+value+' / 100</strong><span class="morale-bar"><i style="width:'+value+'%;background:'+(team===0?'var(--ours)':'var(--foe)')+'"></i></span><small>Dorongan '+moralePush(team).toFixed(2)+'×'+(team===1&&policePressure({team:1,type:'poli'})?' | maju 2×':'')+'</small>';
+  });
+  $('bCam').textContent=S.follow?'CAM ON':'CAM OFF';$('bCam').setAttribute('aria-pressed',String(S.follow));$('bCam').style.borderColor=S.follow?'#6bbf59':'';$('bPause').textContent=S.paused?'>':'||';$('bSpd').textContent='x'+S.speed;
 }
 function showOverlay(h){const o=$('overlay');o.innerHTML='<div class="box">'+h+'</div>';o.hidden=false;}
 function hideOverlay(){$('overlay').hidden=true;}
 function titleScreen(){
   let st='<button onclick="newGame(5)">MULAI</button>';
-  showOverlay('<h1>ATTACK<br>ON DEPR</h1><p>Serang satu arah: dari kiri ke kanan. Sisi kiri <b>tanpa pertahanan</b>, barikade <b>Poli</b> menjaga jalur di kanan.</p><p>Pejuang dan Pejuwati keluar otomatis tiap gelombang. Panggil hero, pakai skill, tembus barikade Poli lalu runtuhkan Gedung DEPR. Poli yang lolos ke kiri mengurangi nyawa. Awas bom asap dan water cannon Poli. Awas boss <b>Bunda</b> (pajak) dan <b>Raja Jas</b> (kereta).</p><h2>SIAP?</h2><div class="stg">'+st+'</div><p class="small">Q W E R = hero/skill | Z X C V = kirim pasukan | Spasi = jeda | panah = geser kamera</p>');
+  showOverlay('<h1>ATTACK<br>ON DEPR</h1><p>Serang satu arah: dari kiri ke kanan. Sisi kiri <b>tanpa pertahanan</b>, barikade <b>Poli</b> menjaga jalur di kanan.</p><p>Pejuang dan Pejuwati keluar otomatis tiap gelombang. Panggil hero, pakai skill, tembus barikade Poli lalu runtuhkan Gedung DEPR. Poli yang lolos ke kiri mengurangi nyawa. Awas bom asap dan water cannon Poli. Awas boss <b>Bunda</b> (pajak) dan <b>Raja Jawa</b> (kereta).</p><h2>SIAP?</h2><div class="stg">'+st+'</div><p class="small">Q W E R = hero/skill | Z X C V = kirim pasukan | Spasi = jeda | panah = geser kamera</p>');
 }
 $('bPause').onclick=()=>{if(S){S.paused=!S.paused;uiRefresh();}};
 $('bSpd').onclick=()=>{if(S){S.speed=S.speed===1?2:S.speed===2?3:1;uiRefresh();}};
@@ -1044,7 +1154,7 @@ document.addEventListener('keydown',e=>{
   
   else if(k===' '){S.paused=!S.paused;e.preventDefault();}
   else if(k==='arrowleft'){S.follow=false;S.cam-=60;}else if(k==='arrowright'){S.follow=false;S.cam+=60;}
-  else if(k==='u')buyUp('p');else if(k==='i')buyUp('e');
+
 });
 cv.addEventListener('pointerdown',e=>{initAudio();camDrag={x:e.clientX,cam:S?S.cam:0,moved:false,x0:e.clientX,y0:e.clientY};cv.setPointerCapture(e.pointerId);});
 cv.addEventListener('pointermove',e=>{if(!camDrag||!S)return;const dx=e.clientX-camDrag.x;if(Math.abs(e.clientX-camDrag.x0)>6||Math.abs(e.clientY-camDrag.y0)>6)camDrag.moved=true;if(camDrag.moved){S.follow=false;S.cam=camDrag.cam-dx/(SC/ (Math.min(2,window.devicePixelRatio||1)));}});
