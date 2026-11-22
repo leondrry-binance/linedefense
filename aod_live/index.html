@@ -2227,8 +2227,8 @@ window.update=function(dt){
 };
 setInterval(()=>{
   const a=[];if(L.b0>0)a.push('DEMO '+Math.ceil(L.b0)+'d');if(L.b1>0)a.push('POLI '+Math.ceil(L.b1)+'d');
-  if(a.length){state.className='hot';state.textContent='● LIVE · ⚔ '+a.join(' · ')+(L.q.length?' · antre '+L.q.length:'');}
-  else{state.className='calm';state.textContent='● LIVE · Santai · kirim gift untuk menyerang'+(L.q.length?' · antre '+L.q.length:'');}
+  if(a.length){state.className='hot';state.textContent='● LIVE b1935 · ⚔ '+a.join(' · ')+(L.q.length?' · antre '+L.q.length:'');}
+  else{state.className='calm';state.textContent='● LIVE b1935 · Santai · kirim gift untuk menyerang'+(L.q.length?' · antre '+L.q.length:'');}
   try{const qb=$('qBadge');if(qb){const t=(a.length?'⚔ '+a.join(' · '):'')+(L.q.length?(a.length?'  ':'')+'🎁 antre '+L.q.length:'');qb.textContent=t;qb.style.display=t?'block':'none';}}catch(e){}
   try{heroStrip();mediaCap();}catch(e){}
   try{const mb=$('mBar');if(mb&&S&&S.morale){const m=Math.max(0,Math.min(100,S.morale[0]));mb.firstChild.style.width=m+'%';mb.querySelector('.l').textContent='DEMONSTRAN '+m;mb.querySelector('.r').textContent=(100-m)+' REZIM';}}catch(e){}
