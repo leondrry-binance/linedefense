@@ -2113,7 +2113,16 @@ if(typeof _vc==='function')window.verticalCamera=function(dt){
 // kamera: selalu ke bentrokan tengah; sorotan hanya dari gift & singkat (kendaraan balik dll diabaikan)
 const _cf=window.camFocus;
 if(typeof _cf==='function')window.camFocus=function(x,t){if(!(L.mg||L.allowKing))return;return _cf.call(this,x,Math.min(t||1.2,1.2));};
-if(typeof CAMERA_ZOOM==='object'&&!L.zd){L.zd=1;CAMERA_ZOOM.portrait*=0.9;CAMERA_ZOOM.landscape*=0.9;try{if(typeof resize==='function')resize();}catch(e){}}
+if(typeof CAMERA_ZOOM==='object'&&!L.zd){L.zd=1;CAMERA_ZOOM.portrait*=0.81;CAMERA_ZOOM.landscape*=0.81;try{if(typeof resize==='function')resize();}catch(e){}}
+// landscape: panel TV dikecilkan (60%) & agak transparan agar arena lega
+const _dtv=window.drawTV;
+if(typeof _dtv==='function')window.drawTV=function(){
+  if(!S)return;const l=newsLayout();if(l.pt)return _dtv.apply(this,arguments);
+  const k=.58;ctx.save();ctx.setTransform(l.dpr,0,0,l.dpr,0,0);ctx.globalAlpha=.86;
+  ctx.save();ctx.translate(6,6);ctx.scale(k,k);ctx.translate(-8,-8);drawTVp(S.tvL,8,8,l.w,l.h,'L');ctx.restore();
+  const rx=l.sw-6;ctx.save();ctx.translate(rx,6);ctx.scale(k,k);ctx.translate(-(l.sw-8),-8);drawTVp(S.tvR,l.sw-8-l.w,8,l.w,l.h,'R');ctx.restore();
+  ctx.restore();
+};
 const _du=window.drawUnit;
 if(typeof _du==='function')window.drawUnit=function(u){
   const r=_du.apply(this,arguments);
