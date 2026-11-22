@@ -1932,6 +1932,8 @@ function addFeed(g){
 }
 const _u2=window.update;
 window.update=function(dt){const r=_u2.apply(this,arguments);
+  try{if(S&&sideB(0)<=0){S.proj=S.proj.filter(p=>p.kind==='godaiFire'||p.team!==0);for(const u of S.units)if(u.team===0&&u.type==='pemanah'&&!u.dying)u.atk=0;}
+      if(S&&sideB(1)<=0)S.proj=S.proj.filter(p=>p.kind==='godaiFire'||p.team!==1);}catch(e){}
   try{if(S&&S.proj)for(const p of S.proj){if(p.dead||!p.t||p.d0===undefined)continue;
     if(p.kind==='stone'||p.kind==='pan'||p.kind==='pot'||p.kind==='spatula'){const d=Math.hypot(p.t.x-p.x,p.t.y-p.y);p.ay=Math.sin(Math.PI*clamp(1-d/p.d0,0,1))*(p.kind==='stone'?80:62);}}}catch(e){}
   return r;};
@@ -2068,6 +2070,10 @@ const _gm=window.gainMorale;
 if(typeof _gm==='function')window.gainMorale=function(team,amount){if(!L.mg)return;return _gm.call(this,team,Math.min(amount,L.mcap||1));};
 /* ---------- aturan damage ---------- */
 const _hurt=window.hurt;
+// moral TIDAK menambah damage; moral hanya menambah kekuatan dorong saat ada gift (burst)
+const _mam=window.moraleAttackMultiplier;
+if(typeof _mam==='function'){window.moraleAttackMultiplier=function(){return 1;};
+  window.moralePush=function(team){return (typeof sideB==='function'&&sideB(team)>0)?_mam(team):1;};}
 const sideB=tm=>tm===0?L.b0:tm===1?L.b1:L.burst;
 window.hurt=function(t,d,src){
   const sb=src&&src.team!==undefined?sideB(src.team):L.burst;
@@ -2078,7 +2084,7 @@ window.hurt=function(t,d,src){
     return;
   }
   const r=_hurt.apply(this,arguments);
-  if(S&&!S.over&&t&&!t.core&&!t.tower&&!t.gate&&src&&src.team!==undefined&&src.team!==t.team&&!(t.dying>0)){try{pushUnit(t,(L.spirit>0&&src.team===0)?18:9,src.team,src);}catch(e){}}
+  if(S&&!S.over&&t&&!t.core&&!t.tower&&!t.gate&&src&&src.team!==undefined&&src.team!==t.team&&!(t.dying>0)){try{pushUnit(t,((L.spirit>0&&src.team===0)?18:9)*(typeof _mam==='function'?_mam(src.team):1),src.team,src);}catch(e){}}
   return r;
 };
 // Raja Jaua / Ratu Pajak hanya muncul lewat gift; skill Raja hanya lewat gift
