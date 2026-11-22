@@ -1881,25 +1881,30 @@ try{document.title+=' [LIVE]';}catch(e){}
 /* ---------- tampilan ---------- */
 const st=document.createElement('style');
 st.textContent=
-'#rLane,#rUnit,#rHero,#rNews{display:none!important}#rUp{pointer-events:none}#mediaCap{flex:0 0 auto;font:bold 10px sans-serif;text-align:center;padding:3px 6px;border-radius:6px;background:#141a26;color:#9fd4ff;line-height:1.3}#mediaCap.off{color:#ff9b9b;background:#2a1414}'+
-'#giftPad{display:grid;grid-template-columns:repeat(7,1fr);grid-auto-flow:row;gap:3px;flex:1;min-height:0}#giftPad button.s0{border-color:#4a9bff;background:#101c3a}#giftPad button.s1{border-color:#ff5d5d;background:#3a1212}'+
-'#giftPad button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;background:#1c1233;color:#fff;border:1px solid #8a5cd6;border-radius:8px;padding:2px;font:bold 9px sans-serif;line-height:1.15;cursor:pointer;min-width:0}'+
-'#giftPad button:active{background:#3a2470}#giftPad i{font-style:normal;font-size:min(7vw,30px);line-height:1}#giftPad small{font-weight:normal;font-size:8px;opacity:.9}#giftPad b{color:#ffd24a;font-size:9px}'+
+'#rLane,#rUnit,#rHero,#rNews,#rUp{display:none!important}#mBar{position:relative;flex:0 0 auto;height:22px;border-radius:11px;overflow:hidden;background:#d6403a;border:1px solid #000;font:bold 11px monospace;color:#fff}#mBar i{position:absolute;left:0;top:0;bottom:0;background:#2f7de1;transition:width .5s ease;border-right:3px solid #fff}#mBar span{position:absolute;top:0;bottom:0;display:flex;align-items:center;padding:0 9px;text-shadow:0 1px 2px #000;white-space:nowrap}#mBar .l{left:0}#mBar .r{right:0}#mediaCap{flex:0 0 auto;font:bold 10px sans-serif;text-align:center;padding:3px 6px;border-radius:6px;background:#141a26;color:#9fd4ff;line-height:1.3}#mediaCap.off{color:#ff9b9b;background:#2a1414}'+
+'#giftPad{display:grid;grid-template-columns:repeat(7,1fr);grid-auto-rows:48px;gap:3px;flex:0 0 auto}#giftPad button.s0{border-color:#4a9bff;background:#101c3a}#giftPad button.s1{border-color:#ff5d5d;background:#3a1212}'+
+'#giftPad button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;background:#1c1233;color:#fff;border:1px solid #8a5cd6;border-radius:8px;padding:2px;font:bold 7.5px sans-serif;line-height:1.05;cursor:pointer;min-width:0;overflow:hidden;padding:1px}'+
+'#giftPad button:active{background:#3a2470}#giftPad i{font-style:normal;font-size:min(4.6vw,19px);line-height:1}#giftPad small{font-weight:normal;font-size:8px;opacity:.9}#giftPad b{color:#ffd24a;font-size:8px}'+
 '#heroStrip{display:flex;gap:4px;min-height:0;flex:0 0 auto;align-items:flex-end}'+
 '#heroStrip .hc{display:flex;flex-direction:column;align-items:center;width:34px;font:8px sans-serif;color:#ffd166}#heroStrip .hc img{width:28px;height:28px;object-fit:contain;image-rendering:pixelated}#heroStrip .hc u{display:block;width:28px;height:3px;background:#000;text-decoration:none}#heroStrip .hc u s{display:block;height:3px;background:#ffd166;text-decoration:none}'+
-'#liveState{position:fixed;top:58px;left:50%;transform:translateX(-50%);z-index:60;font:bold 10px monospace;padding:2px 8px;border-radius:12px;pointer-events:none;white-space:nowrap}'+
+'#liveBar{display:flex;align-items:center;gap:5px;flex:0 0 auto;min-height:22px;overflow:hidden}#liveState{flex:0 0 auto;font:bold 9px monospace;padding:2px 7px;border-radius:12px;white-space:nowrap}'+
+'@media(orientation:portrait){#stage{height:min(128vw,72vh)!important}}#toast{top:auto!important;bottom:26px!important}'+
 '#liveState.calm{background:rgba(20,28,40,.85);color:#9fd4ff;border:1px solid #4a7fb0}'+
 '#liveState.hot{background:rgba(70,10,10,.9);color:#ffd166;border:1px solid #ff6b6b}'+
-'#giftFeed{position:fixed;left:6px;top:80px;z-index:61;display:flex;flex-direction:column;gap:5px;pointer-events:none;max-width:52vw}'+
-'.gf{display:flex;align-items:center;gap:5px;background:rgba(20,10,40,.85);border:1px solid #c48bff;border-radius:22px;padding:2px 8px 2px 4px;color:#fff;font:bold 10px sans-serif;animation:gfin .25s ease-out;transition:opacity .5s}'+
-'.gf i{font-style:normal;font-size:18px;line-height:1}.gf b{color:#ffd24a;font-size:11px}.gf small{font-weight:normal;opacity:.9}'+
+'#giftFeed{flex:1;min-width:0;display:flex;flex-direction:row;gap:4px;overflow:hidden;justify-content:flex-end}'+
+'.gf{display:flex;align-items:center;gap:3px;background:rgba(20,10,40,.85);border:1px solid #c48bff;border-radius:12px;padding:1px 6px 1px 3px;color:#fff;font:bold 9px sans-serif;white-space:nowrap;flex:0 1 auto;min-width:0;overflow:hidden;animation:gfin .25s ease-out;transition:opacity .5s}'+
+'.gf i{font-style:normal;font-size:14px;line-height:1}.gf b{color:#ffd24a;font-size:9px}.gf small{font-weight:normal;opacity:.9}.gf br{display:none}.gf small:before{content:"\\b7  "}'+
 '@keyframes gfin{from{transform:translateX(-40px);opacity:0}to{transform:none;opacity:1}}'+
 '#liveTest{position:fixed;right:6px;bottom:6px;z-index:70;display:flex;gap:4px;flex-wrap:wrap;max-width:60vw;justify-content:flex-end}'+
 '#liveTest button{font:11px sans-serif;padding:4px 7px;background:#2a1b45;color:#fff;border:1px solid #c48bff;border-radius:6px;pointer-events:auto;opacity:1}';
 document.head.appendChild(st);
 
-const state=document.createElement('div');state.id='liveState';state.className='calm';document.body.appendChild(state);
-const feed=document.createElement('div');feed.id='giftFeed';document.body.appendChild(feed);
+const state=document.createElement('div');state.id='liveState';state.className='calm';
+const feed=document.createElement('div');feed.id='giftFeed';
+const bar=document.createElement('div');bar.id='liveBar';bar.appendChild(state);bar.appendChild(feed);
+{const c=document.getElementById('ctl');if(c)c.insertBefore(bar,c.firstChild);else document.body.appendChild(bar);}
+{const c=document.getElementById('ctl');if(c){const mb=document.createElement('div');mb.id='mBar';mb.innerHTML='<i></i><span class="l"></span><span class="r"></span>';c.insertBefore(mb,c.firstChild);}}
+setTimeout(()=>{try{dispatchEvent(new Event('resize'));}catch(e){}},80);
 /* ---------- gift ---------- */
 /* Daftar gift TikTok -> sisi. Setiap tingkat harga punya pasangan setara untuk DEMO dan APARAT. Nama lain: sisi dipilih stabil dari nama. */
 const GL=[ // [nama TikTok, koin, sisi(0=demo,1=aparat), emoji, label]
@@ -1921,7 +1926,7 @@ const icon=(c,g)=>{const f=g&&findG(g.name);return f?f[3]:(sideOf(g||{name:'',co
 function addFeed(g){
   const e=document.createElement('div');e.className='gf';
   e.innerHTML='<i>'+icon(g.coins,g)+'</i><span>'+String(g.user).replace(/</g,'')+' kirim '+String(g.name).replace(/</g,'')+' <b>×'+g.count+'</b><br><small>'+descOf(g)+' · '+g.coins+' koin</small></span>';
-  feed.appendChild(e);while(feed.children.length>3)feed.removeChild(feed.firstChild);
+  feed.appendChild(e);while(feed.children.length>2)feed.removeChild(feed.firstChild);
   setTimeout(()=>{e.style.opacity=0;setTimeout(()=>e.remove(),500);},4000);
 }
 window.GiftIn=function(g){
@@ -2023,7 +2028,7 @@ function spiritBoost(){ // influencer "Ferdi Irwan": semangat naik -> moral, dam
     const h=S.heroes.kangbewok;if(!h||h.dying){heroAct('kangbewok');}else{castSkill('kangbewok');}
     tvF('L','bewok','tertawa','Ferdi Irwan menyalakan semangat','Moral massa naik, tenaga dan dorongan bertambah');toast('Ferdi Irwan: semangat massa naik!');}catch(e){}
 }
-function apply(g){
+function apply0(g){
   const sd=sideOf(g),t=tierOf(g.coins)[1];
   const B=k=>{k=Math.min(90,(sd?L.b1:L.b0)+k);if(sd)L.b1=k;else L.b0=k;};
   if(sd===0){
@@ -2045,6 +2050,13 @@ function apply(g){
   }
   L.total++;toast(g.user+': '+descOf(g));
 }
+const MCAP={dasar:1,kecil:1,sedang:2,kuat:3,ulti:3,epik:4,besar:5};
+function apply(g){ // moral hanya berubah sedikit demi sedikit lewat gift (sisi pengirim naik = lawan turun)
+  const sd=sideOf(g),cap=MCAP[tierOf(g.coins)[1]]||1;L.mg=true;L.mcap=cap;
+  try{apply0(g);gainMorale(sd,cap);}finally{L.mg=false;}
+}
+const _gm=window.gainMorale;
+if(typeof _gm==='function')window.gainMorale=function(team,amount){if(!L.mg)return;return _gm.call(this,team,Math.min(amount,L.mcap||1));};
 /* ---------- aturan damage ---------- */
 const _hurt=window.hurt;
 const sideB=tm=>tm===0?L.b0:tm===1?L.b1:L.burst;
@@ -2078,6 +2090,12 @@ if(typeof _dc==='function')window.drawCannon=function(c){
   _dc.apply(this,arguments);
   if(c.big&&c.ph==='spray'){const x=c.x,y=c.y;ctx.save();ctx.strokeStyle='#d8f0ff';for(let i=0;i<10;i++){ctx.globalAlpha=.3+.3*Math.random();ctx.lineWidth=3+Math.random()*4;const Ln=380+Math.random()*180;ctx.beginPath();ctx.moveTo(x-36,y-34);ctx.quadraticCurveTo(x-36-Ln*.5,y-60+Math.random()*14,x-36-Ln,y-12+Math.random()*30);ctx.stroke();}ctx.restore();}
 };
+// ucapan dibatasi supaya adegan dorong-dorongan terlihat (santai: 2, bentrok: 5 gelembung sekaligus)
+const _bub=window.bubbleAt;
+if(typeof _bub==='function')window.bubbleAt=function(){const cap=(L.b0>0||L.b1>0)?5:2;if((L.bub||0)>=cap)return;L.bub=(L.bub||0)+1;return _bub.apply(this,arguments);};
+// pejuwati & unit jarak jauh tidak melempar apa pun tanpa gift untuk sisinya
+const _pt=window.pejuwatiThrow;
+if(typeof _pt==='function')window.pejuwatiThrow=function(u){if(u&&sideB(u.team)<=0)return false;return _pt.apply(this,arguments);};
 const _du=window.drawUnit;
 if(typeof _du==='function')window.drawUnit=function(u){
   const r=_du.apply(this,arguments);
@@ -2090,6 +2108,8 @@ if(typeof _du==='function')window.drawUnit=function(u){
 const _upd=window.update;
 window.update=function(dt){
   if(S&&!S.paused&&!S.over){
+    L.bub=0;
+    if(S.proj&&S.proj.length)S.proj=S.proj.filter(p=>p.kind==='godaiFire'||sideB(p.team)>0);
     L.spirit=Math.max(0,(L.spirit||0)-dt);L.b0=Math.max(0,L.b0-dt);L.b1=Math.max(0,L.b1-dt);L.burst=Math.max(L.b0,L.b1);L.qt-=dt;
     if(L.qt<=0&&L.q.length){L.qt=Math.max(.15,.5-L.q.length*.004);apply(L.q.shift());}
     // asap menyelimuti demonstran -> aparat bisa maju
@@ -2113,6 +2133,7 @@ setInterval(()=>{
   if(a.length){state.className='hot';state.textContent='● LIVE · ⚔ '+a.join(' · ')+(L.q.length?' · antre '+L.q.length:'');}
   else{state.className='calm';state.textContent='● LIVE · Santai · kirim gift untuk menyerang'+(L.q.length?' · antre '+L.q.length:'');}
   try{heroStrip();mediaCap();}catch(e){}
+  try{const mb=$('mBar');if(mb&&S&&S.morale){const m=Math.max(0,Math.min(100,S.morale[0]));mb.firstChild.style.width=m+'%';mb.querySelector('.l').textContent='DEMONSTRAN '+m;mb.querySelector('.r').textContent=(100-m)+' REZIM';}}catch(e){}
 },250);
 /* ---------- panel gift (gambar bisa diklik untuk tester) & slot influencer kecil ---------- */
 const ctl=$('ctl');
@@ -2120,7 +2141,7 @@ if(ctl){
   const pad=document.createElement('div');pad.id='giftPad';
   [0,1].forEach(sd=>GL.filter(x=>x[2]===sd).forEach(([n,c,sdd,ic,lb])=>{const b=document.createElement('button');b.className='s'+sd;b.innerHTML='<i>'+ic+'</i>'+lb+'<b>'+c+'</b>';b.onclick=()=>fakeGift(n,c,'Tester',1);pad.appendChild(b);}));
   const hs=document.createElement('div');hs.id='heroStrip';
-  ctl.insertBefore(hs,ctl.firstChild);ctl.insertBefore(pad,hs.nextSibling);
+  ctl.insertBefore(hs,bar.nextSibling);ctl.insertBefore(pad,hs.nextSibling);
   const mc=document.createElement('div');mc.id='mediaCap';ctl.insertBefore(mc,$('rUp'));
 }
 const HARSH=['Aparat: situasi terkendali','Aparat: massa diminta bubar','Aparat: tindak tegas provokator','Aparat: perusuh akan ditindak keras','Aparat: bubarkan paksa, tangkap semua!'];
