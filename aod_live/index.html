@@ -1875,7 +1875,7 @@ window.AOD={get S(){return S},update,newGame,heroAct,sendUnit,buyUp,setLane,cast
    Hubungan ke TikTok nanti cukup memanggil:  GiftIn({name,coins,user,count})  dan  LiveEvent('like'|'comment'|'follow',user) */
 (function(){
 if(window.__aodLive)return;window.__aodLive=1;window.AOD_LIVE=true;
-const L={burst:0,b0:0,b1:0,tr:3,tn:0,q:[],qt:0,total:0};window.AODLIVE=L;
+const L={ko:false,burst:0,b0:0,b1:0,tr:3,tn:0,q:[],qt:0,total:0};window.AODLIVE=L;
 const $=id=>document.getElementById(id);
 try{document.title+=' [LIVE]';}catch(e){}
 /* ---------- tampilan ---------- */
@@ -2195,7 +2195,7 @@ window.update=function(dt){
   if(S&&!S.paused&&!S.over){
     L.bub=0;
     S.sq=S.sq.filter(q=>q.gift||!((q.team===0&&(q.type==='prajurit'||q.type==='pemanah'))||(q.team===1&&q.type==='poli')));
-    if(!S.capture){L.at0=(L.at0||0)-dt;L.at1=(L.at1||0)-dt;
+    if(L.ko&&!S.capture){L.at0=(L.at0||0)-dt;L.at1=(L.at1||0)-dt;
       for(const tm of [0,1]){const k=tm?'at1':'at0';
         if(L[k]>0)continue;L[k]=(tm?5:9)*Math.max(.5,Math.min(2,(S.morale[tm]||50)/50));if(sideB(tm)>0)continue;
         const pool=S.units.filter(u=>u.team===tm&&!u.dying&&!u.gone&&!u.hero&&!u.riding&&(tm?u.type==='poli':(u.type==='prajurit'||u.type==='pemanah')));
