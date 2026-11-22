@@ -2097,6 +2097,19 @@ if(typeof _bub==='function')window.bubbleAt=function(){const cap=(L.b0>0||L.b1>0
 // pejuwati & unit jarak jauh tidak melempar apa pun tanpa gift untuk sisinya
 const _pt=window.pejuwatiThrow;
 if(typeof _pt==='function')window.pejuwatiThrow=function(u){if(u&&sideB(u.team)<=0)return false;return _pt.apply(this,arguments);};
+// kamera vertikal landscape: tenang (tidak goyang naik-turun mengikuti unit yang bergantian menyerang)
+const _vc=window.verticalCamera;
+if(typeof _vc==='function')window.verticalCamera=function(dt){
+  if(matchMedia('(orientation:portrait)').matches||!S)return;
+  if(S.follow&&!camDrag){
+    const f=S.units.filter(u=>u.team===0&&!u.dying&&!u.riding&&!u.exiting).sort((a,b)=>b.x-a.x).slice(0,8);
+    const foot=S.capture?350:(f.length?f.reduce((a,u)=>a+u.y,0)/f.length:LANEY[1]);
+    const want=clamp(foot-VH*.88,0,WH-VH);
+    L.vy=L.vy===undefined?VY:L.vy;L.vy+=(want-L.vy)*Math.min(1,dt*.6);   // sasaran dihaluskan dulu
+    if(Math.abs(L.vy-VY)>18)VY+=(L.vy-VY)*Math.min(1,dt*1.5);              // zona mati: abaikan goyangan kecil
+  }
+  VY=clamp(VY,0,Math.max(0,WH-VH));
+};
 const _du=window.drawUnit;
 if(typeof _du==='function')window.drawUnit=function(u){
   const r=_du.apply(this,arguments);
