@@ -1891,6 +1891,7 @@ st.textContent=
 '@media(orientation:portrait){#stage{height:min(128vw,72vh)!important}}#toast{top:auto!important;bottom:26px!important}'+
 '#liveState.calm{background:rgba(20,28,40,.85);color:#9fd4ff;border:1px solid #4a7fb0}'+
 '#liveState.hot{background:rgba(70,10,10,.9);color:#ffd166;border:1px solid #ff6b6b}'+
+'#qBadge{position:absolute;left:50%;top:6px;transform:translateX(-50%);z-index:62;font:bold 11px monospace;padding:3px 9px;border-radius:12px;background:rgba(70,10,10,.88);color:#ffd166;border:1px solid #ff6b6b;pointer-events:none;display:none;white-space:nowrap}@media(orientation:portrait){#qBadge{display:none!important}}'+
 '#giftFeed{position:absolute;left:6px;top:27%;z-index:61;display:flex;flex-direction:column;align-items:flex-start;gap:4px;pointer-events:none;max-width:56%}'+
 '.gf{display:flex;align-items:center;gap:6px;background:rgba(20,10,40,.88);border:1px solid #c48bff;border-radius:18px;padding:2px 10px 2px 5px;color:#fff;font:bold 10px sans-serif;animation:gfin .25s ease-out;transition:opacity .5s;max-width:100%}'+
 '.gf i{font-style:normal;font-size:20px;line-height:1}.gf b{color:#ffd24a;font-size:11px}.gf small{font-weight:normal;opacity:.9;font-size:9px}'+
@@ -1902,7 +1903,7 @@ document.head.appendChild(st);
 
 const state=document.createElement('div');state.id='liveState';state.className='calm';
 const feed=document.createElement('div');feed.id='giftFeed';
-const bar=document.createElement('div');bar.id='liveBar';bar.appendChild(state);{const st0=document.getElementById('stage');(st0||document.body).appendChild(feed);}
+const bar=document.createElement('div');bar.id='liveBar';bar.appendChild(state);{const st0=document.getElementById('stage');(st0||document.body).appendChild(feed);const qb=document.createElement('div');qb.id='qBadge';(st0||document.body).appendChild(qb);}
 {const c=document.getElementById('ctl');if(c)c.insertBefore(bar,c.firstChild);else document.body.appendChild(bar);}
 {const c=document.getElementById('ctl');if(c){const mb=document.createElement('div');mb.id='mBar';mb.innerHTML='<i></i><span class="l"></span><span class="r"></span>';c.insertBefore(mb,c.firstChild);}}
 setTimeout(()=>{try{dispatchEvent(new Event('resize'));}catch(e){}},80);
@@ -2175,6 +2176,7 @@ if(typeof _mk==='function')window.mk=function(type,team,x,lane,m,opt){
 const _ng=window.newGame;
 if(typeof _ng==='function')window.newGame=function(){
   const r=_ng.apply(this,arguments);
+  L.b0=0;L.b1=0;L.burst=0;L.spirit=0;L.q.length=0;L.at0=0;L.at1=0;
   try{for(let i=0;i<12;i++)window.mk(i%3===2?'pemanah':'prajurit',0,SPAWNX,i%3,1,i%3===2?{pejuwatiRole:'front'}:undefined);}catch(e){}
   return r;
 };
@@ -2225,6 +2227,7 @@ setInterval(()=>{
   const a=[];if(L.b0>0)a.push('DEMO '+Math.ceil(L.b0)+'d');if(L.b1>0)a.push('POLI '+Math.ceil(L.b1)+'d');
   if(a.length){state.className='hot';state.textContent='● LIVE · ⚔ '+a.join(' · ')+(L.q.length?' · antre '+L.q.length:'');}
   else{state.className='calm';state.textContent='● LIVE · Santai · kirim gift untuk menyerang'+(L.q.length?' · antre '+L.q.length:'');}
+  try{const qb=$('qBadge');if(qb){const t=(a.length?'⚔ '+a.join(' · '):'')+(L.q.length?(a.length?'  ':'')+'🎁 antre '+L.q.length:'');qb.textContent=t;qb.style.display=t?'block':'none';}}catch(e){}
   try{heroStrip();mediaCap();}catch(e){}
   try{const mb=$('mBar');if(mb&&S&&S.morale){const m=Math.max(0,Math.min(100,S.morale[0]));mb.firstChild.style.width=m+'%';mb.querySelector('.l').textContent='DEMONSTRAN '+m;mb.querySelector('.r').textContent=(100-m)+' REZIM';}}catch(e){}
 },250);
