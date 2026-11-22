@@ -1920,7 +1920,7 @@ const tierOf=c=>TIERS.find(t=>c>=t[0])||TIERS[TIERS.length-1];
 const norm=n=>String(n).toLowerCase().replace(/[^a-z]/g,'');
 const findG=n=>GL.find(x=>norm(x[0])===norm(n)||(norm(n)==='mawar'&&x[0]==='Rose')||(norm(n)==='kopi'&&x[0]==='Coffee'));
 const sideOf=g=>{const f=findG(g.name);if(f)return f[2];let h=0;for(const ch of norm(g.name))h=(h*31+ch.charCodeAt(0))|0;return Math.abs(h)%2;};
-const DESC={0:{dasar:'Pejuang menyerang',kecil:'Pejuwati menyerang',sedang:'Lempar batu',kuat:'Influencer turun + moral naik',ulti:'Botol api (kebakaran)',epik:'Ferdi Irwan: semangat + moral + dorongan',besar:'Perbaikan besar'},
+const DESC={0:{dasar:'Pejuang menyerang',kecil:'Pejuwati menyerang',sedang:'Lempar botol api',kuat:'Influencer turun + moral naik',ulti:'Hujan batu + botol api',epik:'Ferdi Irwan: semangat + moral + dorongan',besar:'Perbaikan besar'},
             1:{dasar:'Poli menyerang',kecil:'Poli bantuan x2',sedang:'Bom asap / panggil Raja Jaua / Ratu Pajak',kuat:'Pasukan elit bayangan x4',ulti:'Water cannon besar',epik:'Skill acak Raja Jaua',besar:'Pasukan Poli x14 + pulih'}};
 const descOf=g=>DESC[sideOf(g)][tierOf(g.coins)[1]];
 const icon=(c,g)=>{const f=g&&findG(g.name);return f?f[3]:(sideOf(g||{name:'',coins:c})?'\u{1F6E1}':'\u{1F381}');};
@@ -2042,9 +2042,9 @@ function apply0(g){
   if(sd===0){
     if(t==='dasar'){B(12);freeSpawn('prajurit');}
     else if(t==='kecil'){B(8);freeSpawn('pemanah');}
-    else if(t==='sedang'){B(12);stoneVolley();}
+    else if(t==='sedang'){B(12);molotovVolley(4);}
     else if(t==='kuat'){B(12);heroPower(false);try{gainMorale(0,10);tvF('L','bewok','tertawa','Influencer turun ke jalan','Semangat massa naik, tuntutan makin lantang');}catch(e){}}
-    else if(t==='ulti'){B(16);molotovVolley(6);}
+    else if(t==='ulti'){B(16);stoneVolley();molotovVolley(6);}
     else if(t==='epik'){B(20);spiritBoost();}
     else{B(25);healAll();heroPower(true);}
   }else{
@@ -2158,6 +2158,18 @@ if(typeof _dr==='function')window.draw=function(){
   try{if(S&&S.proj)for(const p of S.proj){if(p.dead||BIGK.indexOf(p.kind)<0)continue;sw.push([p,p.kind,p.text]);const k=p.kind;p.kind='words';p.text={length:0,toString(){try{bigSprite(p,k);}catch(e){}return ' ';}};}}catch(e){}
   try{return _dr.apply(this,arguments);}finally{for(const [p,k,t] of sw){p.kind=k;p.text=t;}}
 };
+// mulai dekat: demonstran muncul beberapa langkah di belakang garis Poli (tanpa jalan jauh), mobil tiba cepat
+const _mk=window.mk;
+if(typeof _mk==='function')window.mk=function(type,team,x,lane,m,opt){
+  if(team===0&&S&&(x===SPAWNX||x===SPAWNX+20)&&!(opt&&opt.noNear))x=Math.max(SPAWNX,S.defenseLineX-300-Math.random()*70);
+  return _mk.apply(this,arguments);
+};
+const _ng=window.newGame;
+if(typeof _ng==='function')window.newGame=function(){
+  const r=_ng.apply(this,arguments);
+  try{for(let i=0;i<12;i++)window.mk(i%3===2?'pemanah':'prajurit',0,SPAWNX,i%3,1,i%3===2?{pejuwatiRole:'front'}:undefined);}catch(e){}
+  return r;
+};
 const _du=window.drawUnit;
 if(typeof _du==='function')window.drawUnit=function(u){
   const r=_du.apply(this,arguments);
@@ -2171,6 +2183,8 @@ const _upd=window.update;
 window.update=function(dt){
   if(S&&!S.paused&&!S.over){
     L.bub=0;
+    for(const c of S.cars){if(c.st==='go'){const fr=Math.max(0,...S.units.filter(o=>o.team===0&&!o.dying&&!o.riding).map(o=>o.x));c.x=Math.max(c.x,Math.min(fr-60,S.defenseLineX-260)-40);}
+      else if(c.st==='talk'&&c.t>3)c.t=9;}
     if(S.proj&&S.proj.length)S.proj=S.proj.filter(p=>p.kind==='godaiFire'||sideB(p.team)>0);
     L.spirit=Math.max(0,(L.spirit||0)-dt);L.b0=Math.max(0,L.b0-dt);L.b1=Math.max(0,L.b1-dt);L.burst=Math.max(L.b0,L.b1);L.qt-=dt;
     if(L.qt<=0&&L.q.length){L.qt=Math.max(.15,.5-L.q.length*.004);apply(L.q.shift());}
