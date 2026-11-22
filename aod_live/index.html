@@ -1875,13 +1875,18 @@ window.AOD={get S(){return S},update,newGame,heroAct,sendUnit,buyUp,setLane,cast
    Hubungan ke TikTok nanti cukup memanggil:  GiftIn({name,coins,user,count})  dan  LiveEvent('like'|'comment'|'follow',user) */
 (function(){
 if(window.__aodLive)return;window.__aodLive=1;window.AOD_LIVE=true;
-const L={burst:0,q:[],qt:0,total:0};window.AODLIVE=L;
+const L={burst:0,b0:0,b1:0,tr:3,tn:0,q:[],qt:0,total:0};window.AODLIVE=L;
 const $=id=>document.getElementById(id);
 try{document.title+=' [LIVE]';}catch(e){}
 /* ---------- tampilan ---------- */
 const st=document.createElement('style');
 st.textContent=
-'#rLane,#rUnit,#rHero,#rNews,#rUp{pointer-events:none;opacity:.5}'+
+'#rLane,#rUnit,#rHero,#rNews{display:none!important}#rUp{pointer-events:none}#mediaCap{flex:0 0 auto;font:bold 10px sans-serif;text-align:center;padding:3px 6px;border-radius:6px;background:#141a26;color:#9fd4ff;line-height:1.3}#mediaCap.off{color:#ff9b9b;background:#2a1414}'+
+'#giftPad{display:grid;grid-template-columns:repeat(7,1fr);grid-auto-flow:row;gap:3px;flex:1;min-height:0}#giftPad button.s0{border-color:#4a9bff;background:#101c3a}#giftPad button.s1{border-color:#ff5d5d;background:#3a1212}'+
+'#giftPad button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;background:#1c1233;color:#fff;border:1px solid #8a5cd6;border-radius:8px;padding:2px;font:bold 9px sans-serif;line-height:1.15;cursor:pointer;min-width:0}'+
+'#giftPad button:active{background:#3a2470}#giftPad i{font-style:normal;font-size:min(7vw,30px);line-height:1}#giftPad small{font-weight:normal;font-size:8px;opacity:.9}#giftPad b{color:#ffd24a;font-size:9px}'+
+'#heroStrip{display:flex;gap:4px;min-height:0;flex:0 0 auto;align-items:flex-end}'+
+'#heroStrip .hc{display:flex;flex-direction:column;align-items:center;width:34px;font:8px sans-serif;color:#ffd166}#heroStrip .hc img{width:28px;height:28px;object-fit:contain;image-rendering:pixelated}#heroStrip .hc u{display:block;width:28px;height:3px;background:#000;text-decoration:none}#heroStrip .hc u s{display:block;height:3px;background:#ffd166;text-decoration:none}'+
 '#liveState{position:fixed;top:58px;left:50%;transform:translateX(-50%);z-index:60;font:bold 10px monospace;padding:2px 8px;border-radius:12px;pointer-events:none;white-space:nowrap}'+
 '#liveState.calm{background:rgba(20,28,40,.85);color:#9fd4ff;border:1px solid #4a7fb0}'+
 '#liveState.hot{background:rgba(70,10,10,.9);color:#ffd166;border:1px solid #ff6b6b}'+
@@ -1896,12 +1901,26 @@ document.head.appendChild(st);
 const state=document.createElement('div');state.id='liveState';state.className='calm';document.body.appendChild(state);
 const feed=document.createElement('div');feed.id='giftFeed';document.body.appendChild(feed);
 /* ---------- gift ---------- */
-const TIERS=[[500,'Perbaikan besar + semua skill',25],[100,'ULTI semua hero',16],[30,'Skill hero',12],[5,'Pemanah gratis',8],[1,'Prajurit gratis',5]];
+/* Daftar gift TikTok -> sisi. Setiap tingkat harga punya pasangan setara untuk DEMO dan APARAT. Nama lain: sisi dipilih stabil dari nama. */
+const GL=[ // [nama TikTok, koin, sisi(0=demo,1=aparat), emoji, label]
+ ['Rose',1,0,'\u{1F339}','Mawar'],['Coffee',1,1,'\u2615','Kopi'],
+ ['Finger Heart',5,0,'\u{1FAF0}','Finger Heart'],['Padang Rice',5,1,'\u{1F35B}','Nasi Padang'],
+ ['Rosa',10,0,'\u{1F33A}','Rosa'],['Friendship Necklace',10,1,'\u{1F4FF}','Kalung'],
+ ['Doughnut',30,0,'\u{1F369}','Donat'],['Bouquet Flower',30,1,'\u{1F490}','Buket'],
+ ['Rose Hand',199,0,'\u{1F337}','Rose Hand'],['Side by Side',199,1,'\u{1F451}','Side by Side'],['Hand Heart',100,0,'\u{1FAF6}','Hand Heart'],['Confetti',100,1,'\u{1F389}','Confetti'],
+ ['Lion',29999,0,'\u{1F981}','Singa'],['Universe',34999,1,'\u{1F30C}','Universe']];
+const TIERS=[[500,'besar'],[150,'epik'],[99,'ulti'],[30,'kuat'],[10,'sedang'],[5,'kecil'],[1,'dasar']];
 const tierOf=c=>TIERS.find(t=>c>=t[0])||TIERS[TIERS.length-1];
-const icon=c=>c>=1000?'\u{1F433}':c>=100?'\u{1F981}':c>=30?'\u{1F48E}':c>=5?'\u{1F381}':'\u{1F339}';
+const norm=n=>String(n).toLowerCase().replace(/[^a-z]/g,'');
+const findG=n=>GL.find(x=>norm(x[0])===norm(n)||(norm(n)==='mawar'&&x[0]==='Rose')||(norm(n)==='kopi'&&x[0]==='Coffee'));
+const sideOf=g=>{const f=findG(g.name);if(f)return f[2];let h=0;for(const ch of norm(g.name))h=(h*31+ch.charCodeAt(0))|0;return Math.abs(h)%2;};
+const DESC={0:{dasar:'Pejuang menyerang',kecil:'Pejuwati menyerang',sedang:'Lempar batu',kuat:'Influencer turun + moral naik',ulti:'Botol api (kebakaran)',epik:'Ferdi Irwan: semangat + moral + dorongan',besar:'Perbaikan besar'},
+            1:{dasar:'Poli menyerang',kecil:'Poli bantuan x2',sedang:'Bom asap / panggil Raja Jaua / Ratu Pajak',kuat:'Pasukan elit bayangan x4',ulti:'Water cannon besar',epik:'Skill acak Raja Jaua',besar:'Pasukan Poli x14 + pulih'}};
+const descOf=g=>DESC[sideOf(g)][tierOf(g.coins)[1]];
+const icon=(c,g)=>{const f=g&&findG(g.name);return f?f[3]:(sideOf(g||{name:'',coins:c})?'\u{1F6E1}':'\u{1F381}');};
 function addFeed(g){
-  const t=tierOf(g.coins),e=document.createElement('div');e.className='gf';
-  e.innerHTML='<i>'+icon(g.coins)+'</i><span>'+String(g.user).replace(/</g,'')+' kirim '+String(g.name).replace(/</g,'')+' <b>×'+g.count+'</b><br><small>'+t[1]+' · '+g.coins+' koin</small></span>';
+  const e=document.createElement('div');e.className='gf';
+  e.innerHTML='<i>'+icon(g.coins,g)+'</i><span>'+String(g.user).replace(/</g,'')+' kirim '+String(g.name).replace(/</g,'')+' <b>×'+g.count+'</b><br><small>'+descOf(g)+' · '+g.coins+' koin</small></span>';
   feed.appendChild(e);while(feed.children.length>3)feed.removeChild(feed.firstChild);
   setTimeout(()=>{e.style.opacity=0;setTimeout(()=>e.remove(),500);},4000);
 }
@@ -1931,33 +1950,138 @@ function heroPower(all){
   }
 }
 function healAll(){for(const u of S.units)if(u.team===0&&!u.dying&&!u.riding){u.hp=Math.min(u.max,u.hp+u.max*.5);}if(S.core&&S.core.hp>0){}}
+function healSide(tm,f){for(const u of S.units)if(u.team===tm&&!u.dying&&!u.riding)u.hp=Math.min(u.max,u.hp+u.max*f);}
+function polReinf(n){
+  try{const l=Math.floor(Math.random()*3),m=S.st.mult*(1+.035*((S.ew||0)+1)),en=[];
+    for(let i=0;i<n;i++)en.push({t:i*.15,team:1,type:'poli',l:(l+i)%3,m,role:'front'});
+    requestDefense('bantuan aparat',en);}catch(e){}
+}
+function stoneVolley(){ // demo: hujan batu di garis depan Poli (damage + pingsan sebentar + terdorong)
+  try{const dm=S.units.filter(u=>u.team===0&&!u.dying&&!u.riding&&!u.hero);if(!dm.length)return;
+    const lead=Math.max(...dm.map(u=>u.x)),src=dm.reduce((b,u)=>u.x>b.x?u:b,dm[0]);
+    const tg=S.units.filter(u=>u.team===1&&!u.dying&&!u.riding&&u.type==='poli'&&Math.abs(u.x-lead)<420).sort((a,b)=>Math.abs(a.x-lead)-Math.abs(b.x-lead)).slice(0,18);
+    camFocus(lead+120,2);sfx('boom');dm.forEach(u=>{if(Math.abs(u.x-lead)<320)try{giveBuff(u,1.5,5);}catch(e){}});
+    tg.forEach((o,i)=>setTimeout(()=>{try{if(S.over||o.dying)return;hurt(o,90,src);o.stun=Math.max(o.stun||0,2);ring(o.x,o.y,40,'#c9b79c');floatText(o.x,o.y-50,'BATU!','#ffd166');
+      let k=0;const iv=setInterval(()=>{try{if(S.over||o.dying||++k>12){clearInterval(iv);return;}if(!S.paused){pushUnit(o,7,0,src);o.oy=Math.max(-40,Math.min(40,(o.oy||0)+(o.id%2?3:-3)));}}catch(e){clearInterval(iv);}},100);}catch(e){}},i*90));
+    toast('Demonstran melempar batu!');}catch(e){}
+}
+function smokeBomb(){ // aparat: bom asap pada barisan depan demonstran (pakai mesin asap bawaan game)
+  try{const att=S.units.filter(u=>u.team===0&&!u.dying&&!u.riding);const poli=S.units.filter(u=>u.team===1&&u.type==='poli'&&!u.dying);
+    if(!att.length||!poli.length)return;const lead=Math.max(...att.map(u=>u.x)),cx=clamp(lead-25+(Math.random()*160-80),8,WW-8);
+    const th=poli.reduce((b,o)=>Math.abs(o.x-cx)<Math.abs(b.x-cx)?o:b);
+    if(S.smokes.length>=10)S.smokes.shift();
+    const tx=clamp(cx+(Math.random()*180-110),8,WW-8),ty=LANEY[Math.floor(Math.random()*3)]+Math.random()*30-15,ph=poli[Math.floor(Math.random()*poli.length)];
+    camFocus(cx,2.2);S.smokes.push({x:ph.x-10,y:ph.y-34,tx,ty,ph:0,fly:.6+Math.random()*.3,life:6.5,seed:Math.random()*9,forceRetreat:true,radius:145});sfx('boom');
+    toast('Aparat melempar bom asap!');}catch(e){}
+}
+function tvF(side,who,expr,text,sub){const c=side==='L'?S.tvL:S.tvR;if(c&&c.v2&&c.t>0)return;const o={t:4.5,who,expr,text,sub:sub||''};if(side==='L')S.tvL=o;else S.tvR=o;S.tv={t:4.5,text,sub:sub||''};}
+function eliteSquad(n){ // aparat: pasukan elit bayangan (sementara). Media demo memperingatkan, media rezim memberi kabar positif.
+  try{for(let i=0;i<n;i++){const u=mk('poli',1,S.defenseLineX+50,formationLane(i%6),S.st.mult*1.5,{role:'front',form:'shadow_live',formSlot:i%6,formDepth:Math.floor(i/6)});
+      u.shadowPoli=true;u.liveElit=16;u.d={...u.d,name:'Pasukan Elit',body:'#11131b',leg:'#090a10',tint:'grayscale(1) brightness(.35) contrast(1.4)'};u.x=policePostX(u)+50;}
+    tvF('R','presiden','senyum','Pemerintah: situasi aman terkendali','Pasukan khusus disiagakan, personel terlatih menjamin ketertiban');
+    tvF('L','bewok','kaget','Waspada! Pasukan elit aparat','Warga diminta berhati-hati, unit bayangan terlihat di garis depan');
+    toast('Aparat menurunkan pasukan elit bayangan!');}catch(e){}
+}
+function molotovVolley(n){ // demo: botol api -> ledakan api, damage, terbakar, kobaran api
+  try{const dm=S.units.filter(u=>u.team===0&&!u.dying&&!u.riding);if(!dm.length)return;
+    const lead=Math.max(...dm.map(u=>u.x)),src=dm.reduce((b,u)=>u.x>b.x?u:b,dm[0]);
+    const pool=S.units.filter(u=>u.team===1&&!u.dying&&!u.riding&&u.x>lead&&u.x-lead<520);
+    camFocus(lead+160,2);
+    for(let i=0;i<n;i++)setTimeout(()=>{try{if(S.over||S.paused)return;const t=pool.length?pool[Math.floor(Math.random()*pool.length)]:null,tx=clamp(t?t.x:lead+220,8,WW-8),ty=t?t.y:LANEY[1];
+      const sx=src.x+12,sy=src.y-src.sc*SPH*.6;S.proj.push({kind:'godaiFire',team:0,src,x:sx,y:sy,sx,sy,tx,ty,age:0,duration:1.3+Math.random()*.5,ay:0,dmg:95,radius:105});sfx('spawn');}catch(e){}},i*220);
+    toast('Demonstran melempar botol api!');}catch(e){}
+}
+function waterCannon(){ // aparat: water cannon besar -> dorong jauh
+  try{if(S.cannons.length>=3)return;const att=S.units.filter(u=>u.team===0&&!u.dying&&!u.riding);if(!att.length)return;
+    const lead=Math.max(...att.map(u=>u.x));
+    S.cannons.push({x:Math.min(WW-40,lead+560),y:LANEY[Math.floor(Math.random()*3)]+4,ph:'in',t:0,tick:0,big:true,bt:0});
+    camFocus(lead+120,2.4);sfx('spawn');toast('Aparat kerahkan water cannon besar!');}catch(e){}
+}
+function summonBoss(type){ // panggil Raja Jaua / Ratu Pajak bila belum ada
+  try{const present=S.units.some(u=>u.type===type&&u.team===1&&!u.dying&&u.hp>0)||S.sq.some(q=>q.type===type&&q.team===1);if(present)return false;
+    S.sq.push({t:0,team:1,type,l:Math.floor(Math.random()*3),m:S.st.mult});
+    if(S.bossArrival&&S.bossArrival[type]){S.bossArrival[type].spawned=true;S.bossArrival[type].remaining=0;}
+    bossArrivalNews(type,true);toast(EDEF[type].name+' tiba di lokasi!');return true;}catch(e){return false;}
+}
+function kingSkill(){ // skill acak Raja Jaua (kalau belum hadir: dipanggil dulu)
+  try{const king=S.units.find(u=>u.type==='rajajas'&&u.team===1&&u.hp>0&&!u.dying);
+    if(!king){if(!summonBoss('rajajas'))toast('Raja Jaua sedang dalam perjalanan');return;}
+    L.allowKing=true;
+    const fs=[()=>{ // "Saya akan lawan!": aparat semangat, cepat, moral naik (+ Poli Bayangan)
+        const v=S.royalV2||(S.royalV2={charge:0,active:false,remaining:0,covered:false});if(v.active)return false;
+        v.active=true;v.remaining=10;v.charge=0;king.speech='Saya akan lawan!';king.speechTime=3;markSkill(king,3,'#ff3030');gainMorale(1,12);
+        for(let i=0;i<6;i++){const u=mk('poli',1,S.defenseLineX+50,formationLane(i%6),S.st.mult,{role:'front',form:'shadow_v2',formSlot:i%6,formDepth:Math.floor(i/6)});u.shadowPoli=true;u.d={...u.d,name:'Poli Bayangan',body:'#11131b',leg:'#090a10',tint:'grayscale(1) brightness(.35) contrast(1.4)'};u.x=policePostX(u)+50;}
+        v.covered=royalV2Broadcast();toast('Raja Jaua: Saya akan lawan!');sfx('skill');return true;},
+      ()=>{const ok=royalNarrative(king);if(ok&&Math.random()<.5){king.speech='Saya orang biasa, makan nasi!';king.speechTime=2.5;S.fx.push({text:'Saya orang biasa, makan nasi!',x:king.x-110,y:king.y-king.sc*SPH-18,life:2.5,max:2.5,col:'#c6a6ff'});}return ok;},
+      ()=>{king.tunnelCd=0;return royalTunnelStart(king);}];
+    fs.sort(()=>Math.random()-.5);let done=false;for(const f of fs){try{if(f()){done=true;break;}}catch(e){}}
+    L.allowKing=false;if(!done)toast('Raja Jaua menahan diri');}catch(e){L.allowKing=false;}
+}
+function spiritBoost(){ // influencer "Ferdi Irwan": semangat naik -> moral, damage, dorongan
+  try{L.spirit=14;gainMorale(0,15);
+    for(const o of S.units)if(o.team===0&&!o.dying&&!o.riding)giveBuff(o,1.5,14);
+    const h=S.heroes.kangbewok;if(!h||h.dying){heroAct('kangbewok');}else{castSkill('kangbewok');}
+    tvF('L','bewok','tertawa','Ferdi Irwan menyalakan semangat','Moral massa naik, tenaga dan dorongan bertambah');toast('Ferdi Irwan: semangat massa naik!');}catch(e){}
+}
 function apply(g){
-  const t=tierOf(g.coins);L.burst=Math.min(90,L.burst+t[2]);L.total++;
-  if(t[0]===1)freeSpawn('prajurit');
-  else if(t[0]===5)freeSpawn('pemanah');
-  else if(t[0]===30)heroPower(false);
-  else if(t[0]===100)heroPower(true);
-  else{healAll();heroPower(true);}
-  toast(g.user+': '+t[1]);
+  const sd=sideOf(g),t=tierOf(g.coins)[1];
+  const B=k=>{k=Math.min(90,(sd?L.b1:L.b0)+k);if(sd)L.b1=k;else L.b0=k;};
+  if(sd===0){
+    if(t==='dasar'){B(12);freeSpawn('prajurit');}
+    else if(t==='kecil'){B(8);freeSpawn('pemanah');}
+    else if(t==='sedang'){B(12);stoneVolley();}
+    else if(t==='kuat'){B(12);heroPower(false);try{gainMorale(0,10);tvF('L','bewok','tertawa','Influencer turun ke jalan','Semangat massa naik, tuntutan makin lantang');}catch(e){}}
+    else if(t==='ulti'){B(16);molotovVolley(6);}
+    else if(t==='epik'){B(20);spiritBoost();}
+    else{B(25);healAll();heroPower(true);}
+  }else{
+    if(t==='dasar'){B(12);polReinf(1);}
+    else if(t==='kecil'){B(8);polReinf(2);}
+    else if(t==='sedang'){B(12);const r=Math.random();if(r<.25&&summonBoss('rajajas'));else if(r<.5&&summonBoss('bunda'));else smokeBomb();}
+    else if(t==='kuat'){B(12);eliteSquad(4);}
+    else if(t==='ulti'){B(16);waterCannon();}
+    else if(t==='epik'){B(20);kingSkill();}
+    else{B(25);healSide(1,.5);polReinf(14);}
+  }
+  L.total++;toast(g.user+': '+descOf(g));
 }
 /* ---------- aturan damage ---------- */
 const _hurt=window.hurt;
+const sideB=tm=>tm===0?L.b0:tm===1?L.b1:L.burst;
 window.hurt=function(t,d,src){
-  if(S&&!S.over&&!(L.burst>0)){            // SANTAI: hanya dorong-dorongan
+  const sb=src&&src.team!==undefined?sideB(src.team):L.burst;
+  if(S&&!S.over&&!(sb>0)){            // SANTAI: hanya dorong-dorongan, tanpa damage / efek pukul
     if(t&&!t.core&&!t.tower&&!t.gate&&src&&src.team!==undefined&&src.team!==t.team&&!(t.dying>0)){
-      try{pushUnit(t,4,src.team,src);}catch(e){}t.flash=.07;t.hitReact=.1;
+      try{pushUnit(t,4,src.team,src);}catch(e){}
     }
     return;
   }
   const r=_hurt.apply(this,arguments);
-  // BENTROK: dorong sambil serang -> daya ungkit lebih besar
-  if(S&&!S.over&&t&&!t.core&&!t.tower&&!t.gate&&src&&src.team!==undefined&&src.team!==t.team&&!(t.dying>0)){try{pushUnit(t,9,src.team,src);}catch(e){}}
+  if(S&&!S.over&&t&&!t.core&&!t.tower&&!t.gate&&src&&src.team!==undefined&&src.team!==t.team&&!(t.dying>0)){try{pushUnit(t,(L.spirit>0&&src.team===0)?18:9,src.team,src);}catch(e){}}
   return r;
+};
+// Raja Jaua / Ratu Pajak hanya muncul lewat gift; skill Raja hanya lewat gift
+if(typeof window.updateBossArrivals==='function')window.updateBossArrivals=function(){};
+['royalTunnelStart','royalNarrative','royalCounterattack','royalDebt'].forEach(n=>{const f=window[n];if(typeof f==='function')window[n]=function(){return L.allowKing?f.apply(this,arguments):false;};});
+const _ur=window.updateRoyalV2;if(typeof _ur==='function')window.updateRoyalV2=function(dt){if(S&&S.royalV2&&S.royalV2.active)return _ur.apply(this,arguments);};
+try{DEF.kangbewok.name='Ferdi Irwan';}catch(e){}
+// tanpa bom asap / water cannon, tanpa influencer otomatis
+const _ps=window.policeSkills;   // bom asap otomatis & water cannon mati; hanya jalankan asap yang dilempar lewat gift
+if(typeof _ps==='function')window.policeSkills=function(dt){
+  if(!S||!S.pcd||!((S.smokes&&S.smokes.length)||(S.cannons&&S.cannons.length)))return;
+  const p=S.pcd.smoke,c=S.pcd.cannon;S.pcd.smoke=999;S.pcd.cannon=999;
+  try{return _ps.apply(this,arguments);}finally{S.pcd.smoke=p;S.pcd.cannon=c;}
+};
+if(typeof window.autoHeroes==='function')window.autoHeroes=function(){};
+const _dc=window.drawCannon;
+if(typeof _dc==='function')window.drawCannon=function(c){
+  _dc.apply(this,arguments);
+  if(c.big&&c.ph==='spray'){const x=c.x,y=c.y;ctx.save();ctx.strokeStyle='#d8f0ff';for(let i=0;i<10;i++){ctx.globalAlpha=.3+.3*Math.random();ctx.lineWidth=3+Math.random()*4;const Ln=380+Math.random()*180;ctx.beginPath();ctx.moveTo(x-36,y-34);ctx.quadraticCurveTo(x-36-Ln*.5,y-60+Math.random()*14,x-36-Ln,y-12+Math.random()*30);ctx.stroke();}ctx.restore();}
 };
 const _du=window.drawUnit;
 if(typeof _du==='function')window.drawUnit=function(u){
   const r=_du.apply(this,arguments);
-  if(L.burst>0&&u&&!u.dying&&!u.tunnelHidden&&!u.riding&&u.type!=='tvcrew'&&(u.atk>0||u.hero)){
+  if(u&&sideB(u.team)>0&&!u.dying&&!u.tunnelHidden&&!u.riding&&u.type!=='tvcrew'&&(u.atk>0||u.hero)){
     try{const top=(u.sc||1)*28+(u.hero?16:9),y=u.y-top-Math.abs(Math.sin(S.time*10+u.x))*3;
       ctx.save();ctx.font='bold 13px sans-serif';ctx.textAlign='center';ctx.lineWidth=3;ctx.strokeStyle='#000';ctx.strokeText('\u2694',u.x,y);ctx.fillStyle=u.team===0?'#ffd24a':'#ff6b6b';ctx.fillText('\u2694',u.x,y);ctx.restore();}catch(e){}
   }
@@ -1966,22 +2090,55 @@ if(typeof _du==='function')window.drawUnit=function(u){
 const _upd=window.update;
 window.update=function(dt){
   if(S&&!S.paused&&!S.over){
-    L.burst=Math.max(0,L.burst-dt);L.qt-=dt;
+    L.spirit=Math.max(0,(L.spirit||0)-dt);L.b0=Math.max(0,L.b0-dt);L.b1=Math.max(0,L.b1-dt);L.burst=Math.max(L.b0,L.b1);L.qt-=dt;
     if(L.qt<=0&&L.q.length){L.qt=Math.max(.15,.5-L.q.length*.004);apply(L.q.shift());}
+    // asap menyelimuti demonstran -> aparat bisa maju
+    if(S.smokes&&S.smokes.some(m=>m.ph!==0)){
+      const att=S.units.filter(u=>u.team===0&&!u.dying&&!u.riding),lead=att.length?Math.max(...att.map(u=>u.x)):0,k=Math.min(3,S.smokes.length);
+      for(const u of S.units)if(u.team===1&&u.type==='poli'&&!u.dying&&!u.riding&&u.x>lead+50&&u.x-lead<650)u.x=Math.max(lead+45,u.x-(26+10*k)*dt);
+    }
+    if(S.units.some(u=>u.liveElit>0)){let dead=false;for(const u of S.units)if(u.liveElit>0){u.liveElit-=dt;if(u.liveElit<=0)dead=true;}if(dead)S.units=S.units.filter(u=>!(u.liveElit!==undefined&&u.liveElit<=0));}
+    for(const c of S.cannons||[]){if(!c.big)continue;
+      if(c.ph==='in')c.x-=150*dt;
+      if(c.ph==='spray'){c.bt-=dt;if(c.bt<=0){c.bt=.2;for(const o of S.units){if(o.team!==0||o.dying||o.riding||o.x>c.x-36||o.x<c.x-560)continue;const f=o.hero?.5:1;pushUnit(o,38*f,1,{team:1,type:'cannon'});if(!o.hero&&Math.random()<.35)o.stun=Math.max(o.stun||0,.5);}}if(c.t>10)c.ph='out';}
+    }
+    L.tr-=dt;
+    if(L.tr<=0&&L.burst<=0){L.tr=7;const n=S.units.filter(u=>u.team===0&&!u.dying&&!u.hero&&!u.riding).length;
+      if(n<12){L.tn++;freeSpawn(L.tn%3===0?'pemanah':'prajurit');}}
   }
   return _upd.apply(this,arguments);
 };
 setInterval(()=>{
-  if(L.burst>0){state.className='hot';state.textContent='● LIVE · ⚔ BENTROK '+Math.ceil(L.burst)+'d'+(L.q.length?' · antre '+L.q.length:'');}
-  else{state.className='calm';state.textContent='● LIVE · Santai · kirim gift untuk bentrok'+(L.q.length?' · antre '+L.q.length:'');}
+  const a=[];if(L.b0>0)a.push('DEMO '+Math.ceil(L.b0)+'d');if(L.b1>0)a.push('POLI '+Math.ceil(L.b1)+'d');
+  if(a.length){state.className='hot';state.textContent='● LIVE · ⚔ '+a.join(' · ')+(L.q.length?' · antre '+L.q.length:'');}
+  else{state.className='calm';state.textContent='● LIVE · Santai · kirim gift untuk menyerang'+(L.q.length?' · antre '+L.q.length:'');}
+  try{heroStrip();mediaCap();}catch(e){}
 },250);
-/* ---------- panel tes (buka dengan ?test) ---------- */
-if(/[?&]test\b/.test(location.search)){
-  const tp=document.createElement('div');tp.id='liveTest';
-  [['Rose',1],['Donut',5],['Diamond',30],['Lion',100],['Universe',500]].forEach(([n,c])=>{
-    const b=document.createElement('button');b.textContent=n+' '+c;b.onclick=()=>fakeGift(n,c,'Tester',1);tp.appendChild(b);});
-  const b2=document.createElement('button');b2.textContent='×10 Rose';b2.onclick=()=>fakeGift('Rose',1,'Tester',10);tp.appendChild(b2);
-  document.body.appendChild(tp);
+/* ---------- panel gift (gambar bisa diklik untuk tester) & slot influencer kecil ---------- */
+const ctl=$('ctl');
+if(ctl){
+  const pad=document.createElement('div');pad.id='giftPad';
+  [0,1].forEach(sd=>GL.filter(x=>x[2]===sd).forEach(([n,c,sdd,ic,lb])=>{const b=document.createElement('button');b.className='s'+sd;b.innerHTML='<i>'+ic+'</i>'+lb+'<b>'+c+'</b>';b.onclick=()=>fakeGift(n,c,'Tester',1);pad.appendChild(b);}));
+  const hs=document.createElement('div');hs.id='heroStrip';
+  ctl.insertBefore(hs,ctl.firstChild);ctl.insertBefore(pad,hs.nextSibling);
+  const mc=document.createElement('div');mc.id='mediaCap';ctl.insertBefore(mc,$('rUp'));
+}
+const HARSH=['Aparat: situasi terkendali','Aparat: massa diminta bubar','Aparat: tindak tegas provokator','Aparat: perusuh akan ditindak keras','Aparat: bubarkan paksa, tangkap semua!'];
+function mediaCap(){
+  const mc=$('mediaCap');if(!mc||typeof S==='undefined'||!S||!S.news)return;
+  const on=k=>S.news[k]&&S.news[k].hp>0&&!S.news[k].dying;
+  const r=on('reporter'),c=on('cameraman');
+  const h=HARSH[Math.min(HARSH.length-1,Math.floor(((S.wave||1)-1)/2))];
+  mc.className=(r||c)?'':'off';
+  mc.textContent=((r||c)?'Media: '+(r?'Reporter ':'')+(c?'Kameramen ':'')+'ONLINE':'Berita offline')+' · '+h;
+}
+let _hk='';
+function heroStrip(){
+  const hs=$('heroStrip');if(!hs||typeof S==='undefined'||!S||!S.heroes)return;
+  const act=HEROES.filter(k=>S.heroes[k]&&!S.heroes[k].dying&&S.heroes[k].hp>0);
+  const key=act.join(',');
+  if(key!==_hk){_hk=key;hs.innerHTML=act.map(k=>'<div class="hc" data-k="'+k+'"><img src="'+(typeof iconOf==='function'?iconOf(k):'')+'"><u><s></s></u></div>').join('');}
+  for(const d of hs.children){const h=S.heroes[d.dataset.k];if(h)d.querySelector('s').style.width=Math.max(0,Math.min(100,h.hp/h.max*100))+'%';}
 }
 })();
 </script></body>
