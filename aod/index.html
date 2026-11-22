@@ -243,7 +243,7 @@ function teamVolley(h){
   throwGodaiFire(h);h.speech='Lempar batu dan molotov bersama!';h.speechTime=1.6;markSkill(h,2,'#58b4e8');S.lastVolley=shots;toast('Komando Bimo/Godai: '+shots+' pasukan sekitar melempar serentak!');
 }
 function drawSkillAura(u,y,height,width=height*.4){
-  if(!(u.skillGlow>0))return;const color=u.skillGlowColor||'#ffd166',pulse=.6+.4*Math.sin(S.time*10);
+  if(!(u.skillGlow>0)||u.team===0&&u.type==='prajurit'&&!S.fighterAuraIds?.has(u.id))return;const color=u.skillGlowColor||'#ffd166',pulse=.6+.4*Math.sin(S.time*10);
   ctx.save();ctx.globalAlpha=.35+.15*pulse;const g=ctx.createRadialGradient(u.x,y-height*.45,2,u.x,y-height*.45,height*.65);g.addColorStop(0,color+'99');g.addColorStop(1,color+'00');ctx.fillStyle=g;ctx.fillRect(u.x-width*1.6,y-height*1.12,width*3.2,height*1.2);
   // Animated flame tongues surround the caster without hiding its face.
   ctx.shadowColor=color;ctx.shadowBlur=10;
@@ -341,11 +341,19 @@ function burst(x,y,col,n,sp){for(let i=0;i<n;i++){const a=Math.random()*6.28,v=r
 
 /* ---------- aksi pemain ---------- */
 function fighterSpeech(u){u.speech=pick(['Merdeka!','Hidup rakyat!','Bersatu kita kuat!','Pantang menyerah!','Demi keadilan!']);u.speechTime=.8;}
+function fighterAuraTargets(){
+ const fighters=S.units.filter(u=>u.team===0&&u.type==='prajurit'&&u.hp>0&&!u.dying&&!u.riding&&!u.eat);
+ const lead=fighters.reduce((x,u)=>Math.max(x,u.x),-Infinity),left=S.cam,right=S.cam+VW;
+ if(lead<left||lead>right)return new Set();
+ return new Set(fighters.filter(u=>u.x>=lead-90&&u.x>=left&&u.x<=right&&u.y>=VY&&u.y-SPH*u.sc<=VY+VH).sort((a,b)=>b.x-a.x||a.id-b.id).slice(0,3).map(u=>u.id));
+}
 function fighterTap(){
  if(!S||S.over||S.paused||!S.cars.some(c=>!c.dead))return false;
  if((S.fighterTapCd||0)>0)return true;S.fighterTapCd=.12;
  const fighters=S.units.filter(u=>u.team===0&&u.type==='prajurit'&&!u.dying&&!u.riding&&!u.eat);
- fighters.forEach(u=>{u.combo=Math.min(8,(u.combo||0)+1);markSkill(u,.5,'#ffd166');fighterSpeech(u);});
+ const aura=fighterAuraTargets();
+ fighters.forEach(u=>{u.combo=Math.min(8,(u.combo||0)+1);if(aura.has(u.id))markSkill(u,.5,'#ffd166');else u.skillGlow=0;fighterSpeech(u);});
+ for(const c of S.cars)if(!c.dead)markSkill(c,.5,'#ffd166');
  if(!fighters.length)toast('Mobil masih datang; Pejuang belum turun.');return true;
 }
 function fighterCombo(u,dt){
@@ -670,7 +678,9 @@ function royalTunnelUpdate(u,dt){
  else if(t.phase==='return'){Object.assign(u,t.home);t.phase='exit';t.time=.6;u.tunnelHidden=false;}
  else royalTunnelFinish(u);return true;
 }
-function drawRoyalTunnel(u){const t=u.tunnel;if(!t||u.dying>0)return;ctx.save();ctx.strokeStyle='#aeb789';ctx.lineWidth=2;ctx.setLineDash([5,7]);ctx.globalAlpha=.45;ctx.beginPath();ctx.moveTo(t.home.x,t.home.y+4);ctx.lineTo(t.exit.x,t.exit.y+4);ctx.stroke();ctx.setLineDash([]);ctx.globalAlpha=1;
+function royalTunnelMarker(u){return u.tunnel&&!u.dying&&!u.tunnelHidden&&['attack','exit'].includes(u.tunnel.phase)?{x:u.x,y:u.y+4}:null;}
+function drawRoyalTunnelMarker(u){const p=royalTunnelMarker(u);if(!p)return;const pulse=.5+.5*Math.sin(S.time*9);ctx.save();ctx.fillStyle='#ffe066';ctx.globalAlpha=.22+.12*pulse;ctx.beginPath();ctx.ellipse(p.x,p.y,42+5*pulse,14+2*pulse,0,0,Math.PI*2);ctx.fill();ctx.globalAlpha=.85;ctx.strokeStyle='#fff2a0';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(p.x,p.y,31+4*pulse,10+2*pulse,0,0,Math.PI*2);ctx.stroke();ctx.restore();}
+function drawRoyalTunnel(u){const t=u.tunnel;if(!t||u.dying>0)return;drawRoyalTunnelMarker(u);ctx.save();ctx.strokeStyle='#aeb789';ctx.lineWidth=2;ctx.setLineDash([5,7]);ctx.globalAlpha=.45;ctx.beginPath();ctx.moveTo(t.home.x,t.home.y+4);ctx.lineTo(t.exit.x,t.exit.y+4);ctx.stroke();ctx.setLineDash([]);ctx.globalAlpha=1;
  for(const p of [t.home,t.exit]){ctx.fillStyle='#101516';ctx.strokeStyle='#768269';ctx.beginPath();ctx.ellipse(p.x,p.y+4,21,7,0,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.fillStyle='#788175';ctx.fillRect(p.x-15,p.y-7,30,4);}
  if(u.tunnelHidden){const from=t.phase==='return'?t.exit:t.home,to=t.phase==='return'?t.home:t.exit,k=clamp(1-t.time/1.6,0,1);ctx.fillStyle='#ffd166';ctx.beginPath();ctx.arc(from.x+(to.x-from.x)*k,from.y+(to.y-from.y)*k+4,4,0,Math.PI*2);ctx.fill();}ctx.restore();}
 function bossRecover(u,dt){
@@ -1629,6 +1639,7 @@ function draw(){
   if(!S)return;
   let sx=0,sy=0;if(S.shake>0){sx=rnd(-3,3)*S.shake*4;sy=rnd(-3,3)*S.shake*4;}
   ctx.save();ctx.translate(sx,sy);
+  S.fighterAuraIds=fighterAuraTargets();
   drawBG();
   ctx.translate(-S.cam,0);
   for(const u of S.units)if(u.tunnel)drawRoyalTunnel(u);
