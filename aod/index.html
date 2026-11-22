@@ -157,7 +157,7 @@ function newGame(n){
   S={stage:n,st,time:0,gold:200,lives:20,wave:0,waveT:6,ewT:35,sq:[],units:[],proj:[],fx:[],texts:[],
      lane:1,plv:0,elv:0,capture:null,royalEmergencyCd:0,rallyTime:0,defenseCooldown:35,lastVolley:0,debtTime:0,debtSource:'',morale:[50,50],policeBrutal:false,ojolCallId:0,ojolNotices:{},firePatches:[],over:false,paused:false,speed:1,follow:true,cam:0,shake:0,uid:0,
      heroes:{},hcd:{},skcd:{},ucd:{},bossF:[false,false],freeze:0,msg:''};
-  S.enemyNewsCd={ereporter:6,ekamera:12};S.moraleRegenT=1;S.broadcastDown=[false,false];S.towers=[];S.trains=[];S.news={};S.tv={t:0,text:'',sub:''};S.tvL={t:0};S.tvR={t:0};S.cars=[];S.smokes=[];S.cannons=[];S.pcd={smoke:24,cannon:40};S.crowdBack=0;S.callq=[];S.sqp={};S.ncd={reporter:0,cameraman:0};
+  S.enemyNewsCd={ereporter:6,ekamera:12};S.moraleRegenT=1;S.broadcastDown=[false,false];S.towers=[];S.trains=[];S.news={};S.tv={t:0,text:'',sub:''};S.tvL={t:0};S.tvR={t:0};S.tvSkillQueue=[];S.cars=[];S.smokes=[];S.cannons=[];S.pcd={smoke:24,cannon:40};S.crowdBack=0;S.callq=[];S.sqp={};S.ncd={reporter:0,cameraman:0};
   if(USE_TOWERS)for(let l=0;l<3;l++)for(const tx of[TOW_OUT,TOW_IN]){const hp=Math.round(st.tow*(tx===TOW_OUT?1:1.3));S.towers.push({tower:1,team:1,x:tx,lane:l,y:LANEY[l],hp,max:hp,flash:0,dying:0,gone:false,cd:rnd(.5,2),outer:tx===TOW_OUT});}
   S.core={core:1,team:1,x:n>=5?YARD.center:CORE_X,y:340,hp:st.core,max:st.core,flash:0,dying:0,gone:false,cd:2};
   S.gate=n>=5?{gate:1,team:1,x:YARD.left,y:312,hp:Math.min(1400,Math.round(st.core*.18)),max:Math.min(1400,Math.round(st.core*.18)),flash:0,dying:0,gone:false}:null;
@@ -198,15 +198,21 @@ function rechargeYard(reason='penjaga halaman'){
   if(!spendDefenseReserve(reason,count))return false;fillYard(yardPolice().length+count);return true;
 }
 function commandTarget(u,range=480){return S.units.filter(t=>t.team===1&&t.hp>0&&!t.dying&&!t.gone&&!t.tunnelHidden&&!t.riding&&t.x>=u.x-20&&t.x-u.x<=range).concat(structTargets().filter(t=>t.x>=u.x-20&&t.x-u.x<=range)).sort((a,b)=>Math.abs(a.x-u.x)-Math.abs(b.x-u.x))[0];}
-function isSupportPejuwati(u){return !!(u&&u.team===0&&u.type==='pemanah'&&u.pejuwatiRole!=='front'&&!u.reserveAttack);}
-function updatePejuwatiReserve(){
- const alive=u=>u.team===0&&u.hp>0&&!u.dying&&!u.gone;
- const n=S.units.filter(u=>alive(u)&&u.type==='prajurit').length;
- if(n<=6)S.pejuwatiReserve=true;else if(n>=10)S.pejuwatiReserve=false;
- const supports=S.units.filter(u=>alive(u)&&u.type==='pemanah'&&u.pejuwatiRole!=='front');
- const keeper=supports.slice().sort((a,b)=>Number(b.kitchenTime>0)-Number(a.kitchenTime>0)||a.id-b.id)[0];
- for(const u of supports)u.reserveAttack=!!(S.pejuwatiReserve&&u!==keeper&&!(u.kitchenTime>0));
-}
+function isSupportPejuwati(u){return !!(u&&u.team===0&&u.type==='pemanah'&&u.pejuwatiRole!=='front'&&!u.reserveAttack&&!u.pejuwatiMelee);}
+function updatePejuwatiReserve(){
+ const alive=u=>u.team===0&&u.hp>0&&!u.dying&&!u.gone;
+ const n=S.units.filter(u=>alive(u)&&u.type==='prajurit').length;
+ if(n<=6)S.pejuwatiReserve=true;else if(n>=10)S.pejuwatiReserve=false;
+ const women=S.units.filter(u=>alive(u)&&u.type==='pemanah'),previous=new Set(women.filter(u=>u.pejuwatiMelee).map(u=>u.id));
+ for(const u of women)u.pejuwatiMelee=false;
+ if(S.pejuwatiReserve)for(let lane=0;lane<3;lane++){
+  const candidates=women.filter(u=>u.lane===lane&&!u.riding&&!u.exiting&&!(u.smokePanic>0)).sort((a,b)=>Number(previous.has(b.id))-Number(previous.has(a.id))||Number(a.kitchenTime>0)-Number(b.kitchenTime>0)||Number(b.pejuwatiRole==='front')-Number(a.pejuwatiRole==='front')||b.x-a.x||a.id-b.id);
+  const lead=candidates[0];if(lead){lead.pejuwatiMelee=true;if(lead.kitchenTime>0){lead.kitchenTime=0;lead.cooking=false;lead.mode='combat';if(lead.skillGlowColor==='#5fd18a')lead.skillGlow=0;}}
+ }
+ const supports=women.filter(u=>u.pejuwatiRole!=='front');
+ const keeper=supports.filter(u=>!u.pejuwatiMelee).sort((a,b)=>Number(b.kitchenTime>0)-Number(a.kitchenTime>0)||a.id-b.id)[0];
+ for(const u of supports)u.reserveAttack=!!(S.pejuwatiReserve&&(u.pejuwatiMelee||u!==keeper&&!(u.kitchenTime>0)));
+}
 function pejuwatiThrow(u,target,dir){
  const kinds=['stone','pan','pot','spatula'];const kind=kinds[(u.utensilShot||0)%kinds.length];u.utensilShot=(u.utensilShot||0)+1;
  S.proj.push({x:u.x+dir*10,y:u.y-u.sc*SPH*.55,t:target,dmg:u.dmg,team:u.team,kind,sp:280,src:u});sfx('shot');
@@ -214,13 +220,13 @@ function pejuwatiThrow(u,target,dir){
 function selectCook(){const cooks=S.units.filter(u=>isSupportPejuwati(u)&&u.hp>0&&!u.dying&&!u.riding);return cooks.sort((a,b)=>Number(b.kitchenTime>0)-Number(a.kitchenTime>0)||a.kitchenCooldown-b.kitchenCooldown||b.x-a.x)[0];}
 function activateKitchen(u){
   if(!isSupportPejuwati(u)||S.over||S.paused||u.stun>0||u.kitchenTime>0||(u.kitchenCooldown||0)>0)return false;
-  u.kitchenTime=16;u.kitchenCooldown=24;u.kitchenTick=0;u.kx=u.x;u.cooking=true;u.mode='cook';markSkill(u,16,'#5fd18a');gainMorale(0);
+  u.kitchenTime=16;u.kitchenCooldown=24;u.kitchenTick=0;u.kx=u.x;u.cooking=true;u.mode='cook';markSkill(u,16,'#5fd18a');gainMorale(0);skillBroadcast(u,'Dapur siap! Ayo pulihkan tenaga!','Pejuwati — Dapur bersama');
   u.speech='Dapur buka 16 detik!';u.speechTime=1.4;toast('Pejuwati: dapur aktif 16 detik. Tap lagi untuk lempar sisa makanan.');return true;
 }
 function throwFood(u){
   if(!isSupportPejuwati(u)||S.over||S.paused||u.stun>0||!(u.kitchenTime>0)||(u.foodCooldown||0)>0)return false;
   const target=commandTarget(u);if(!target){toast('Belum ada lawan dalam jangkauan sisa makanan.');return false;}
-  u.foodCooldown=.35;u.atk=.28;u.speech='Nih sisa makanannya!';u.speechTime=.8;
+  u.foodCooldown=.35;u.atk=.28;u.speech='Nih sisa makanannya!';u.speechTime=.8;skillBroadcast(u,u.speech,'Pejuwati — Lempar sisa makanan');
   S.proj.push({x:u.x+10,y:u.y-u.sc*SPH*.55,t:target,dmg:8,team:0,kind:'food',sp:300,src:u});return true;
 }
 function rallyBonus(u){return u&&u.team===0&&u.rallyBuffTime>0?(u.rallyBonus||0)/100:0;}
@@ -232,6 +238,7 @@ function rallyTeam(h){
  h.rallyNextInput=S.time+.12;S.rallyTime=10;h.rallyPower=Math.min(100,(h.rallyPower||0)+step);
  for(const u of S.units)if(u.team===0&&u.hp>0&&!u.dying&&!u.riding&&!u.exiting&&Math.hypot(u.x-h.x,u.y-h.y)<=220){u.rallyBonus=Math.min(100,(u.rallyBuffTime>0?u.rallyBonus||0:0)+step);u.rallyBuffTime=10;}
  h.atk=.28;h.rallyClicks=(h.rallyClicks||0)+1;h.speech=['Semangat! Rakyat bersatu!','Jangan menyerah!','Bersama kita kuat!','Maju demi keadilan!'][h.rallyClicks%4];h.speechTime=1.6;
+ skillBroadcast(h,h.speech,'Kang Bewok — Orasi Semangat');
  const color=h.rallyPower>=75?'#ff3030':h.rallyPower>=40?'#ff7a25':h.rallyPower>=15?'#ffb52e':'#ffd166';markSkill(h,10,color);
  if(!ongoing)toast('Orasi Bewok: teman sekitar +'+step+'% ATK dan kecepatan, 10 detik. TAP untuk menambah!');return true;
 }
@@ -240,7 +247,7 @@ function teamVolley(h){
   let shots=0;for(const u of people){const target=commandTarget(u);if(!target)continue;const molotov=u.type==='pemanah'||shots%4===3;
     S.proj.push({x:u.x+10,y:u.y-u.sc*SPH*.55,t:target,dmg:Math.max(8,u.dmg*.9),team:0,kind:molotov?'molotov':'stone',sp:molotov?230:320,src:u});u.atk=.28;shots++;
   }
-  throwGodaiFire(h);h.speech='Lempar batu dan molotov bersama!';h.speechTime=1.6;markSkill(h,2,'#58b4e8');S.lastVolley=shots;toast('Komando Bimo/Godai: '+shots+' pasukan sekitar melempar serentak!');
+  throwGodaiFire(h);h.speech='Lempar batu dan molotov bersama!';h.speechTime=1.6;skillBroadcast(h,h.speech,'Godai — Komando Lempar');markSkill(h,2,'#58b4e8');S.lastVolley=shots;toast('Komando Bimo/Godai: '+shots+' pasukan sekitar melempar serentak!');
 }
 function drawSkillAura(u,y,height,width=height*.4){
   if(!(u.skillGlow>0)||u.team===0&&u.type==='prajurit'&&!S.fighterAuraIds?.has(u.id))return;const color=u.skillGlowColor||'#ffd166',pulse=.6+.4*Math.sin(S.time*10);
@@ -354,7 +361,7 @@ function fighterTap(){
  const aura=fighterAuraTargets();
  fighters.forEach(u=>{u.combo=Math.min(8,(u.combo||0)+1);if(aura.has(u.id))markSkill(u,.5,'#ffd166');else u.skillGlow=0;fighterSpeech(u);});
  for(const c of S.cars)if(!c.dead)markSkill(c,.5,'#ffd166');
- if(!fighters.length)toast('Mobil masih datang; Pejuang belum turun.');return true;
+ if(fighters.length){const front=fighters.reduce((a,b)=>b.x>a.x?b:a);skillBroadcast(front,front.speech,'Pejuang — Seruan perjuangan');}else{skillBroadcast('prajurit','Merdeka! Pasukan sedang menuju lokasi!','Mobil demo datang');toast('Mobil masih datang; Pejuang belum turun.');}return true;
 }
 function fighterCombo(u,dt){
  if(u.type!=='prajurit'||u.team!==0||u.riding||u.eat)return false;
@@ -376,7 +383,7 @@ function sendUnit(k){
   if(S.units.filter(u=>u.team===0&&!u.dying).length>=supplyCap()){toast('Supply penuh: butuh liputan media');return;}
   if(S.callq.length>=6){toast('Antrian panggilan penuh');return;}
   S.gold-=d.cost;S.ucd[k]=1.2;S.callq.push({k,l:pickLane()});sfx('spawn');
-  if(k==='prajurit')toast('Mobil pasukan dipanggil...');
+  if(k==='prajurit'){skillBroadcast('prajurit','Merdeka! Kami segera datang!','Pejuang — Mobil demo');toast('Mobil pasukan dipanggil...');}
 }
 function callUpdate(dt){
   for(let i=0;i<S.callq.length;i++){
@@ -495,7 +502,7 @@ function fireGirangWord(h,t,strong=false){
  if(!h.wordToken||S.time-h.wordToken.lastShot>4)h.wordToken={applied:false,lastShot:S.time};
  h.wordToken.lastShot=S.time;const word=girangSpeech(h,strong);
  S.proj.push({x:h.x+10,y:h.y-h.sc*SPH*.5+((h.wordIndex-1)%3-1)*14,t,dmg:h.dmg*(strong?.55:1),team:0,kind:'words',sp:340,src:h,text:word,tauntToken:h.wordToken});
- h.atk=.22;markSkill(h,.45,'#ff7a7a');return true;
+ skillBroadcast(h,word,'Roki Girang — Sindir Pedas');h.atk=.22;markSkill(h,.45,'#ff7a7a');return true;
 }
 function girangTap(h){
  if(S.over||S.paused||S.capture||h.stun>0||h.smokePanic>0||(h.wordInputCd||0)>0)return false;
@@ -532,7 +539,7 @@ function castSkill(k){
   }else if(k==='bimo'){
     teamVolley(h);
   }else if(k==='retrobro'){
-    h.jump=.6;h.jx=Math.min(h.x,assaultLimit());h.tx=Math.min(h.jx+190,assaultLimit());
+    skillBroadcast(h,'Maju! Jangan menyerah!','RetroBro — Loncat Injak');h.jump=.6;h.jx=Math.min(h.x,assaultLimit());h.tx=Math.min(h.jx+190,assaultLimit());
   }
   S.skcd[k]=d.scd;sfx('skill');
 }
@@ -558,7 +565,7 @@ function newsHurt(n,d){
   if(!S||S.over||S.paused||!n||S.news[n.type]!==n||n.hp<=0||!Number.isFinite(d)||d<=0)return;
   n.hp-=d;n.flash=.12;floatText(n.x,n.y-70,Math.round(d),'#ff6b6b');
   if(n.hp<=0&&S.news[n.type]===n){
-    delete S.news[n.type];if(n.type==='cameraman')S.broadcastDown[0]=true;S.ncd[n.type]=25;const onAir=tvPlayer(),loss=broadcastLost(0,n);
+    delete S.news[n.type];if(!friendlyMediaOnline())clearSkillBroadcasts();if(n.type==='cameraman')S.broadcastDown[0]=true;S.ncd[n.type]=25;const onAir=tvPlayer(),loss=broadcastLost(0,n);
     ring(n.x,n.y,70,'#ff6b6b');burst(n.x,n.y-30,'#fff',12,110);toast(NEWS[n.type].name+' tumbang! Kembali otomatis 25 detik lagi. '+(onAir?'Liputan lain masih aktif':'Siaran putus: Demo Morals -'+loss));sfx('boom');
     tvShow('L',n.type==='reporter'?'reporter':'kamera','kaget',onAir?'LIPUTAN TERGANGGU':'SIARAN TERPUTUS',onAir?'Jurnalis diserang saat meliput aksi':'Liputan terputus saat aparat mendesak massa');
     tvShow('R','batik','senyum','Liputan massa terganggu',onAir?'Petugas menuding siaran massa provokatif':'Petugas mengklaim keadaan terkendali');
@@ -566,9 +573,32 @@ function newsHurt(n,d){
 }
 function newsFront(){const f=S.units.filter(u=>u.team===0&&!u.dying&&!u.riding).sort((a,b)=>b.x-a.x).slice(0,3);return f.length?f.reduce((a,u)=>a+u.x,0)/f.length:SPAWNX;}
 const tvEnemy=()=>S.units.some(o=>o.type==='tvcrew'&&o.team===1&&o.dying<=0),tvPlayer=()=>NEWSK.some(k=>S.news[k]),tvAny=()=>tvEnemy()||tvPlayer();
-function tvShow(side,who,expr,text,sub){const o={t:4.5,who,expr,text,sub:sub||''};if(side==='L')S.tvL=o;else S.tvR=o;S.tv={t:4.5,text,sub:sub||''};}
+function friendlyMediaOnline(){return !!(S&&NEWSK.every(k=>S.news[k]&&S.news[k].hp>0&&!S.news[k].dying));}
+function clearSkillBroadcasts(){S.tvSkillQueue=[];if(S.tvL&&S.tvL.skill)S.tvL={t:0};}
+function showSkillBroadcast(item){S.tvL={...item,t:1.8,skill:true};S.tv={t:1.8,text:item.text,sub:item.sub};}
+function advanceSkillBroadcast(){
+ if(!S||S.paused)return;
+ if(S.over||S.capture||!friendlyMediaOnline()){clearSkillBroadcasts();return;}
+ S.tvSkillQueue=(S.tvSkillQueue||[]).filter(item=>S.time-item.queuedAt<=12);
+ if(S.tvL.skill&&S.tvL.t>0)return;
+ if(S.tvSkillQueue.length)showSkillBroadcast(S.tvSkillQueue.shift());
+}
+function skillBroadcast(actor,text,label){
+ if(!S||S.over||S.paused||S.capture)return false;if(!friendlyMediaOnline()){clearSkillBroadcasts();return false;}
+ const type=typeof actor==='string'?actor:actor.type,who=ART[type]||type;
+ const item={who,expr:type==='rokigirang'?'marah':'semangat',text:String(text),sub:label||'Seruan dari lapangan',queuedAt:S.time};
+ S.tvSkillQueue=S.tvSkillQueue||[];
+ if(!(S.tvL.skill&&S.tvL.t>0)&&!S.tvSkillQueue.length){showSkillBroadcast(item);return true;}
+ const pending=S.tvSkillQueue.findIndex(p=>p.who===who);
+ if(pending>=0){S.tvSkillQueue[pending]=item;return true;}
+ if(S.tvL.who===who&&S.tvL.text===item.text&&S.tvL.sub===item.sub)return true;
+ if(S.tvSkillQueue.length>=8)return false;
+ S.tvSkillQueue.push(item);return true;
+}
+function tvShow(side,who,expr,text,sub){const current=side==='L'?S.tvL:S.tvR;if(current&&current.skill&&current.t>0&&(side!=='L'||friendlyMediaOnline()))return false;const o={t:4.5,who,expr,text,sub:sub||''};if(side==='L')S.tvL=o;else S.tvR=o;S.tv={t:4.5,text,sub:sub||''};}
 function newsUpdate(dt){
   if(!S||S.over||S.paused)return;
+  if(!friendlyMediaOnline())clearSkillBroadcasts();
   for(const k of NEWSK)if(!S.news[k])S.ncd[k]=Math.max(0,S.ncd[k]-dt);
   const fx=newsFront();
   for(const k of NEWSK)if(!S.news[k]&&S.ncd[k]<=0&&S.time>(k==='reporter'?5:16))newsAct(k);
@@ -603,14 +633,16 @@ function newsUpdate(dt){
       }
     }
   }
-  if(S.tv.t>0)S.tv.t-=dt;S.tvL.t-=dt;S.tvR.t-=dt;
+  if(S.tv.t>0)S.tv.t-=dt;S.tvL.t-=dt;S.tvR.t-=dt;advanceSkillBroadcast();
 }
 function buyUp(w){return false;} // Legacy API retained; upgrades replaced by morale status.
 
 /* AOD crowd navigation and recoverable boss retreat. */
 function crowdGhost(u){return !!(u.hero||(u.d&&u.d.hero)||u.type==='ojol'||u.type==='rajajas'||u.type==='bunda');}
 function canPassAlly(u,o,dir){
- if(u.team!==0||o.team!==0)return false;
+ if(u.team!==0||o.team!==0)return false;
+ if(u.type==='prajurit'&&dir>0)return true;
+ if(u.type==='pemanah'&&u.pejuwatiMelee&&dir>0)return true;
  if(isSupportPejuwati(u)&&dir<0)return true;
  if(u.type==='pemanah'&&!isSupportPejuwati(u)&&isSupportPejuwati(o))return true;
  return u.type==='prajurit'&&((u.eatReturn||0)>0||isSupportPejuwati(o)||o.eat);
@@ -1007,7 +1039,7 @@ function update(dt){
     let blk=false;
     for(const o of LN[u.team][u.lane]){if(o===u||o.dying>0)continue;if(crowdBlocks(u,o,dir,gp(u,o))){blk=true;break;}}
     const dual=!!u.d.mr;
-    const eng=bt&&(u.team===0&&u.type==='pemanah'?bd<=u.range+4:dual?(bd<=u.d.mr+4||(bd<=u.range+4&&blk)):bd<=u.range+4);
+    const eng=bt&&(u.team===0&&u.type==='pemanah'?(u.pejuwatiMelee?bd<=u.d.mr+4:bd<=u.range+4):dual?(bd<=u.d.mr+4||(bd<=u.range+4&&blk)):bd<=u.range+4);
     if(eng){
       u.ph=0;
       if(u.cd<=0){
@@ -1193,7 +1225,7 @@ function startCapture(){
   S.sq=[];S.proj=[];S.firePatches=[];S.trains=[];S.smokes=[];S.cannons=[];S.cars=[];
   if(S.gate){S.gate.gone=true;S.gate.hp=0;}
   S.units.forEach(u=>{u.atk=0;u.stun=0;u.smokePanic=0;u.wordQueued=0;u.wordWindow=0;u.jump=0;u.riding=false;});
-  assignCapturePositions();S.rallyTime=0;S.debtTime=0;S.debtSource='';S.policeBrutal=false;S.follow=true;camDrag=null;
+  assignCapturePositions();clearSkillBroadcasts();S.rallyTime=0;S.debtTime=0;S.debtSource='';S.policeBrutal=false;S.follow=true;camDrag=null;
   tvShow('L','bewok','tertawa','Massa berhasil menduduki gedung','Warga menyatakan tuntutan mereka tak bisa dibungkam');tvShow('R','polisi','kaget','Pertahanan menarik pasukan','Pihak pertahanan mengecam pendudukan gedung');
   toast('Gedung runtuh! Demonstran maju menduduki reruntuhan dan mengibarkan bendera.');
 }
@@ -1560,7 +1592,7 @@ function drawNews(n){
   if(n.atk>0){ctx.fillStyle='#ff3b3b';ctx.fillRect(Math.round(n.x+10),Math.round(n.y-ht-2),12,6);ctx.fillStyle='#fff';ctx.font='bold 5px monospace';ctx.fillText('LIVE',n.x+11,n.y-ht+3);}
 }
 function broadcastStatus(side){
-  const online=side==='L'?tvPlayer():tvEnemy();
+  const online=side==='L'?friendlyMediaOnline():tvEnemy();
   return {online,text:online?'ONLINE':'OFFLINE',color:online?'#5fd18a':'#ff6b6b'};
 }
 function newsLayout(){
@@ -1576,7 +1608,7 @@ function newsTextLines(text,width,font){
  }if(line)lines.push(line);return lines;
 }
 function drawTVp(p,x,y,w,h,side){
- const status=broadcastStatus(side),layout=newsLayout(),pt=layout.pt;
+ const status=broadcastStatus(side),layout=newsLayout(),pt=layout.pt;if(p&&p.skill&&!status.online)p=null;
  if(!p||!(p.t>0))p={who:side==='L'?'reporter':'polisi',expr:status.online?(side==='L'?'senyum':'siaga'):'kaget',text:status.online?(side==='L'?'Warga desak aparat menjawab':'Aparat sebut situasi terkendali'):'Sambungan liputan terputus',sub:status.online?(side==='L'?'Tuntutan rakyat terus disuarakan':'Pertahanan mengecam provokasi massa'):'Kami berupaya kembali ke lapangan'};
  ctx.save();ctx.textAlign='left';
  const fs=pt?43:32,fx=x+4,fy=y+21,tx=fx+fs+7,mw=w-(tx-x)-5;
@@ -1589,6 +1621,7 @@ function drawTVp(p,x,y,w,h,side){
  ctx.fillStyle=status.color;ctx.textAlign='right';ctx.fillText(status.text,x+w-4,y+12);ctx.textAlign='left';
  R(fx-1,fy-1,fs+2,fs+2,'#fff');const im=faceImg(p.who,p.expr);
  if(im&&im.complete&&im.naturalWidth){ctx.save();ctx.beginPath();ctx.rect(fx,fy,fs,fs);ctx.clip();ctx.drawImage(im,fx-2,fy-2,fs+4,fs+4);ctx.restore();}
+ else{const A=ATL[p.who];if(A&&A.ok){const f=A.f[A.i.idle],crop=Math.min(f[1],f[2]*.62);ctx.drawImage(A.im,f[0]+(f[1]-crop)*.5,A.H-f[2],crop,crop,fx,fy,fs,fs);}else{const fallback=faceImg(p.who,'normal');if(fallback&&fallback.complete&&fallback.naturalWidth)ctx.drawImage(fallback,fx,fy,fs,fs);}}
  ctx.font=titleFont;ctx.fillStyle='#ffe066';title.forEach((line,i)=>ctx.fillText(line,tx,titleY+i*13));
  ctx.font=subFont;ctx.fillStyle='#bfe4ff';sub.forEach((line,i)=>ctx.fillText(line,x+5,subY+i*12));
  R(x,y+h,w,16,'#10151d');ctx.fillStyle=status.color;ctx.font='bold 12px monospace';ctx.textAlign='center';ctx.fillText(status.text,x+w/2,y+h+13);ctx.restore();
