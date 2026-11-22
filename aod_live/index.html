@@ -2181,6 +2181,19 @@ if(typeof _ng==='function')window.newGame=function(){
   try{for(let i=0;i<12;i++)window.mk(i%3===2?'pemanah':'prajurit',0,SPAWNX,i%3,1,i%3===2?{pejuwatiRole:'front'}:undefined);}catch(e){}
   return r;
 };
+// pejuwati diam menghadap lawan (bukan kamera): pakai pose samping saat berdiri
+const _spr=window.sprUnit;
+if(typeof _spr==='function')window.sprUnit=function(u,y){
+  let A=null,old;
+  try{if(u&&u.type==='pemanah'&&u.team===0&&!(u.mv>0)&&!(u.atk>0)&&!(u.hitReact>0)&&!(u.dying>0)){A=ATL[artOf(u)];if(A&&A.ok&&A.i&&A.i.walk&&A.i.walk.length){old=A.i.idle;A.i.idle=A.i.walk[0];}else A=null;}}catch(e){A=null;}
+  try{return _spr.apply(this,arguments);}finally{if(A)A.i.idle=old;}
+};
+// versi build ditaruh di halaman depan (judul), bukan di dalam permainan
+const VTAG='b1935';
+function tagTitle(){try{const o=document.getElementById('overlay');const bx=o&&o.querySelector('.box');if(bx&&bx.querySelector('h1')&&!bx.querySelector('.vtag')){const d=document.createElement('div');d.className='vtag';d.style.cssText='margin-top:10px;font:11px monospace;color:#8fa3b8;opacity:.85';d.textContent='Versi TikTok LIVE · '+VTAG;bx.appendChild(d);}}catch(e){}}
+const _ts=window.titleScreen;
+if(typeof _ts==='function')window.titleScreen=function(){const r=_ts.apply(this,arguments);tagTitle();return r;};
+tagTitle();
 const _du=window.drawUnit;
 if(typeof _du==='function')window.drawUnit=function(u){
   const r=_du.apply(this,arguments);
@@ -2227,8 +2240,8 @@ window.update=function(dt){
 };
 setInterval(()=>{
   const a=[];if(L.b0>0)a.push('DEMO '+Math.ceil(L.b0)+'d');if(L.b1>0)a.push('POLI '+Math.ceil(L.b1)+'d');
-  if(a.length){state.className='hot';state.textContent='● LIVE b1935 · ⚔ '+a.join(' · ')+(L.q.length?' · antre '+L.q.length:'');}
-  else{state.className='calm';state.textContent='● LIVE b1935 · Santai · kirim gift untuk menyerang'+(L.q.length?' · antre '+L.q.length:'');}
+  if(a.length){state.className='hot';state.textContent='● LIVE · ⚔ '+a.join(' · ')+(L.q.length?' · antre '+L.q.length:'');}
+  else{state.className='calm';state.textContent='● LIVE · Santai · kirim gift untuk menyerang'+(L.q.length?' · antre '+L.q.length:'');}
   try{const qb=$('qBadge');if(qb){const t=(a.length?'⚔ '+a.join(' · '):'')+(L.q.length?(a.length?'  ':'')+'🎁 antre '+L.q.length:'');qb.textContent=t;qb.style.display=t?'block':'none';}}catch(e){}
   try{heroStrip();mediaCap();}catch(e){}
   try{const mb=$('mBar');if(mb&&S&&S.morale){const m=Math.max(0,Math.min(100,S.morale[0]));mb.firstChild.style.width=m+'%';mb.querySelector('.l').textContent='DEMONSTRAN '+m;mb.querySelector('.r').textContent=(100-m)+' REZIM';}}catch(e){}
