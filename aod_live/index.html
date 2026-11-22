@@ -2170,15 +2170,18 @@ if(typeof _dr==='function')window.draw=function(){
 // mulai dekat: demonstran muncul beberapa langkah di belakang garis Poli (tanpa jalan jauh), mobil tiba cepat
 const _mk=window.mk;
 if(typeof _mk==='function')window.mk=function(type,team,x,lane,m,opt){
-  if(team===0&&S&&(x===SPAWNX||x===SPAWNX+20)&&!(opt&&opt.noNear))x=Math.max(SPAWNX,S.defenseLineX-300-Math.random()*70);
+  let rnd0=false;
+  if(team===0&&S&&(x===SPAWNX||x===SPAWNX+20)&&!(opt&&opt.noNear)){x=Math.max(SPAWNX,S.defenseLineX-300-Math.random()*70);if(type==='prajurit'||type==='pemanah'){lane=Math.floor(Math.random()*3);rnd0=true;}}
   if(team===1&&type==='poli'&&x===ESPAWN)x=S.defenseLineX+60+Math.random()*90;
-  return _mk.apply(this,arguments);
+  const u=_mk.call(this,type,team,x,lane,m,opt);
+  if(rnd0&&u){u.oy=Math.random()*40-20;u.y=LANEY[u.lane]+u.oy;}
+  return u;
 };
 const _ng=window.newGame;
 if(typeof _ng==='function')window.newGame=function(){
   const r=_ng.apply(this,arguments);
   L.th=0;L.b0=0;L.b1=0;L.burst=0;L.spirit=0;L.q.length=0;L.at0=0;L.at1=0;
-  try{for(let i=0;i<12;i++)window.mk(i%3===2?'pemanah':'prajurit',0,SPAWNX,i%3,1,i%3===2?{pejuwatiRole:'front'}:undefined);}catch(e){}
+  try{{let pj=0,pw=0;for(let i=0;i<12;i++){const w=i%3===2;window.mk(w?'pemanah':'prajurit',0,SPAWNX,w?(pw++)%3:(pj++)%3,1,w?{pejuwatiRole:'front'}:undefined);}}}catch(e){}
   return r;
 };
 // pejuwati diam menghadap lawan (bukan kamera): pakai pose samping saat berdiri
@@ -2189,11 +2192,21 @@ if(typeof _spr==='function')window.sprUnit=function(u,y){
   try{return _spr.apply(this,arguments);}finally{if(A)A.i.idle=old;}
 };
 // versi build ditaruh di halaman depan (judul), bukan di dalam permainan
-const VTAG='b1935';
+const VTAG='b1950';
 function tagTitle(){try{const o=document.getElementById('overlay');const bx=o&&o.querySelector('.box');if(bx&&bx.querySelector('h1')&&!bx.querySelector('.vtag')){const d=document.createElement('div');d.className='vtag';d.style.cssText='margin-top:10px;font:11px monospace;color:#8fa3b8;opacity:.85';d.textContent='Versi TikTok LIVE · '+VTAG;bx.appendChild(d);}}catch(e){}}
 const _ts=window.titleScreen;
 if(typeof _ts==='function')window.titleScreen=function(){const r=_ts.apply(this,arguments);tagTitle();return r;};
 tagTitle();
+// semua pejuwati maju ikut mendorong (mode jarak dekat), tidak diam di belakang
+const _upr=window.updatePejuwatiReserve;
+if(typeof _upr==='function')window.updatePejuwatiReserve=function(){
+  const r=_upr.apply(this,arguments);
+  try{for(const u of S.units)if(u.team===0&&u.type==='pemanah'&&!u.dying){u.pejuwatiMelee=true;u.reserveAttack=false;if(u.kitchenTime>0){u.kitchenTime=0;u.cooking=false;u.mode='combat';}}}catch(e){}
+  return r;
+};
+// sesama demonstran boleh saling melewati; hanya Poli yang tetap berformasi (pagar betis)
+const _cb=window.crowdBlocks;
+if(typeof _cb==='function')window.crowdBlocks=function(u,o){if(u&&o&&u.team===0&&o.team===0)return false;return _cb.apply(this,arguments);};
 const _du=window.drawUnit;
 if(typeof _du==='function')window.drawUnit=function(u){
   const r=_du.apply(this,arguments);
