@@ -1965,7 +1965,8 @@ function healSide(tm,f){for(const u of S.units)if(u.team===tm&&!u.dying&&!u.ridi
 function polReinf(n){
   try{const l=Math.floor(Math.random()*3),m=S.st.mult*(1+.035*((S.ew||0)+1)),en=[];
     for(let i=0;i<n;i++)en.push({t:i*.15,team:1,type:'poli',l:(l+i)%3,m,role:'front'});
-    requestDefense('bantuan aparat',en);}catch(e){}
+    const have=S.units.filter(u=>u.team===1&&u.type==='poli'&&!u.dying&&!u.gone).length+S.sq.filter(q=>q.team===1&&q.type==='poli').length;
+    en.slice(0,Math.max(0,90-have)).forEach(q=>{q.gift=1;S.sq.push(q);});}catch(e){}
 }
 function stoneVolley(){ // demo: hujan batu di garis depan Poli (damage + pingsan sebentar + terdorong)
   try{const dm=S.units.filter(u=>u.team===0&&!u.dying&&!u.riding&&!u.hero);if(!dm.length)return;
@@ -2162,6 +2163,7 @@ if(typeof _dr==='function')window.draw=function(){
 const _mk=window.mk;
 if(typeof _mk==='function')window.mk=function(type,team,x,lane,m,opt){
   if(team===0&&S&&(x===SPAWNX||x===SPAWNX+20)&&!(opt&&opt.noNear))x=Math.max(SPAWNX,S.defenseLineX-300-Math.random()*70);
+  if(team===1&&type==='poli'&&x===ESPAWN)x=S.defenseLineX+60+Math.random()*90;
   return _mk.apply(this,arguments);
 };
 const _ng=window.newGame;
@@ -2183,6 +2185,15 @@ const _upd=window.update;
 window.update=function(dt){
   if(S&&!S.paused&&!S.over){
     L.bub=0;
+    S.sq=S.sq.filter(q=>q.gift||!((q.team===0&&(q.type==='prajurit'||q.type==='pemanah'))||(q.team===1&&q.type==='poli')));
+    if(!S.capture){L.at0=(L.at0||0)-dt;L.at1=(L.at1||0)-dt;
+      for(const tm of [0,1]){const k=tm?'at1':'at0';
+        if(L[k]>0)continue;L[k]=(tm?2:4)*Math.max(.5,Math.min(2,(S.morale[tm]||50)/50));if(sideB(tm)>0)continue;
+        const pool=S.units.filter(u=>u.team===tm&&!u.dying&&!u.gone&&!u.hero&&!u.riding&&(tm?u.type==='poli':(u.type==='prajurit'||u.type==='pemanah')));
+        const foes=S.units.filter(o=>o.team!==tm&&!o.dying&&!o.gone&&!o.riding);
+        if(pool.length){ // yang kalah: unit paling dekat musuh (garis depan) tumbang
+          let u=pool[0],bd=1e9;for(const c of pool){let d=1e9;for(const o of foes){const dd=Math.abs(o.x-c.x);if(dd<d)d=dd;}if(d<bd){bd=d;u=c;}}
+          u.hp=0;u.dying=.55;try{burst(u.x,u.y-14,tm?'#7fb040':'#6a8cff',8,90);ring(u.x,u.y,26,'#ffd166');floatText(u.x,u.y-46,'KO','#ff8a6a');}catch(e){}}}}
     for(const c of S.cars){if(c.st==='go'){const fr=Math.max(0,...S.units.filter(o=>o.team===0&&!o.dying&&!o.riding).map(o=>o.x));c.x=Math.max(c.x,Math.min(fr-60,S.defenseLineX-260)-40);}
       else if(c.st==='talk'&&c.t>3)c.t=9;}
     if(S.proj&&S.proj.length)S.proj=S.proj.filter(p=>p.kind==='godaiFire'||sideB(p.team)>0);
@@ -2200,7 +2211,7 @@ window.update=function(dt){
     }
     L.tr-=dt;
     if(L.tr<=0&&L.burst<=0){L.tr=7;const n=S.units.filter(u=>u.team===0&&!u.dying&&!u.hero&&!u.riding).length;
-      if(n<12){L.tn++;freeSpawn(L.tn%3===0?'pemanah':'prajurit');}}
+      }
   }
   return _upd.apply(this,arguments);
 };
