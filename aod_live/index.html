@@ -2110,6 +2110,10 @@ if(typeof _vc==='function')window.verticalCamera=function(dt){
   }
   VY=clamp(VY,0,Math.max(0,WH-VH));
 };
+// kamera: selalu ke bentrokan tengah; sorotan hanya dari gift & singkat (kendaraan balik dll diabaikan)
+const _cf=window.camFocus;
+if(typeof _cf==='function')window.camFocus=function(x,t){if(!(L.mg||L.allowKing))return;return _cf.call(this,x,Math.min(t||1.2,1.2));};
+if(typeof CAMERA_ZOOM==='object'&&!L.zd){L.zd=1;CAMERA_ZOOM.portrait*=0.9;CAMERA_ZOOM.landscape*=0.9;try{if(typeof resize==='function')resize();}catch(e){}}
 const _du=window.drawUnit;
 if(typeof _du==='function')window.drawUnit=function(u){
   const r=_du.apply(this,arguments);
