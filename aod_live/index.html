@@ -1930,6 +1930,11 @@ function addFeed(g){
   feed.appendChild(e);while(feed.children.length>3)feed.removeChild(feed.firstChild);
   setTimeout(()=>{e.style.opacity=0;setTimeout(()=>e.remove(),500);},4000);
 }
+const _u2=window.update;
+window.update=function(dt){const r=_u2.apply(this,arguments);
+  try{if(S&&S.proj)for(const p of S.proj){if(p.dead||!p.t||p.d0===undefined)continue;
+    if(p.kind==='stone'||p.kind==='pan'||p.kind==='pot'||p.kind==='spatula'){const d=Math.hypot(p.t.x-p.x,p.t.y-p.y);p.ay=Math.sin(Math.PI*clamp(1-d/p.d0,0,1))*(p.kind==='stone'?80:62);}}}catch(e){}
+  return r;};
 window.GiftIn=function(g){
   if(!g||L.q.length>400)return;
   const n=Math.max(1,Math.min(100,+g.count||1)),c=Math.max(1,+g.coins||1);
@@ -1967,8 +1972,10 @@ function stoneVolley(){ // demo: hujan batu di garis depan Poli (damage + pingsa
     const lead=Math.max(...dm.map(u=>u.x)),src=dm.reduce((b,u)=>u.x>b.x?u:b,dm[0]);
     const tg=S.units.filter(u=>u.team===1&&!u.dying&&!u.riding&&u.type==='poli'&&Math.abs(u.x-lead)<420).sort((a,b)=>Math.abs(a.x-lead)-Math.abs(b.x-lead)).slice(0,18);
     camFocus(lead+120,2);sfx('boom');dm.forEach(u=>{if(Math.abs(u.x-lead)<320)try{giveBuff(u,1.5,5);}catch(e){}});
+    tg.forEach((o,i)=>{const th=dm.filter(u=>Math.abs(u.x-lead)<260);const so=th.length?th[Math.floor(Math.random()*th.length)]:src;
+      setTimeout(()=>{try{if(S.over||o.dying)return;S.proj.push({x:so.x+10,y:so.y-so.sc*SPH*.6,t:o,dmg:1,team:0,kind:'stone',sp:430,src:so});sfx('shot');}catch(e){}},i*90);});
     tg.forEach((o,i)=>setTimeout(()=>{try{if(S.over||o.dying)return;hurt(o,90,src);o.stun=Math.max(o.stun||0,2);ring(o.x,o.y,40,'#c9b79c');floatText(o.x,o.y-50,'BATU!','#ffd166');
-      let k=0;const iv=setInterval(()=>{try{if(S.over||o.dying||++k>12){clearInterval(iv);return;}if(!S.paused){pushUnit(o,7,0,src);o.oy=Math.max(-40,Math.min(40,(o.oy||0)+(o.id%2?3:-3)));}}catch(e){clearInterval(iv);}},100);}catch(e){}},i*90));
+      let k=0;const iv=setInterval(()=>{try{if(S.over||o.dying||++k>12){clearInterval(iv);return;}if(!S.paused){pushUnit(o,7,0,src);o.oy=Math.max(-40,Math.min(40,(o.oy||0)+(o.id%2?3:-3)));}}catch(e){clearInterval(iv);}},100);}catch(e){}},800+i*90));
     toast('Demonstran melempar batu!');}catch(e){}
 }
 function smokeBomb(){ // aparat: bom asap pada barisan depan demonstran (pakai mesin asap bawaan game)
@@ -2122,6 +2129,34 @@ if(typeof _dtv==='function')window.drawTV=function(){
   ctx.save();ctx.translate(6,6);ctx.scale(k,k);ctx.translate(-8,-8);drawTVp(S.tvL,8,8,l.w,l.h,'L');ctx.restore();
   const rx=l.sw-6;ctx.save();ctx.translate(rx,6);ctx.scale(k,k);ctx.translate(-(l.sw-8),-8);drawTVp(S.tvR,l.sw-8-l.w,8,l.w,l.h,'R');ctx.restore();
   ctx.restore();
+};
+// aura mobil: hanya 1 mobil per frame (hemat GPU, tidak lag)
+const _sa=window.drawSkillAura;
+if(typeof _sa==='function')window.drawSkillAura=function(u){
+  if(u&&u.cargo){if(L.at!==S.time){L.at=S.time;L.an=0;}if(L.an++>=1)return;}
+  return _sa.apply(this,arguments);
+};
+// proyektil lebih besar & lengkung lebih tinggi (agar terlihat jelas)
+const BIGK=['stone','pan','pot','spatula','food','molotov','godaiFire'];
+function bigSprite(p,k){
+  const x=p.x,y=p.y-(p.ay||0),t=S.time;ctx.save();ctx.translate(x,y);
+  if(k==='stone'){ctx.rotate(t*8);ctx.fillStyle='#8f8f9e';ctx.strokeStyle='#14141a';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(-7,-2);ctx.lineTo(-3,-7);ctx.lineTo(5,-6);ctx.lineTo(8,1);ctx.lineTo(3,7);ctx.lineTo(-5,5);ctx.closePath();ctx.fill();ctx.stroke();ctx.fillStyle='#c4c4d2';ctx.fillRect(-3,-4,4,3);}
+  else if(k==='molotov'||k==='godaiFire'){
+    ctx.save();ctx.rotate(t*12);ctx.scale(2.6,2.6);ctx.fillStyle='#3fae5a';ctx.fillRect(-2,-4,4,8);ctx.fillStyle='#2b7d40';ctx.fillRect(-1,-6,2,2);ctx.fillStyle='#ffe0a0';ctx.fillRect(-1,-7,2,2);ctx.restore();
+    const f=Math.sin(t*30);ctx.fillStyle='#ff5a14';ctx.fillRect(-7,-24+f*2,14,12);ctx.fillStyle='#ff9a1a';ctx.fillRect(-5,-30+f*3,10,14);ctx.fillStyle='#ffe066';ctx.fillRect(-3,-26+f*2,6,9);
+    ctx.fillStyle='#ffb14a';ctx.fillRect(-12+f*3,-8,4,4);ctx.fillRect(9-f*3,-4,4,4);}
+  else if(k==='food'){ctx.scale(2,2);ctx.fillStyle='#a15c32';ctx.fillRect(-4,-3,7,5);ctx.fillStyle='#ffe0a0';ctx.fillRect(-2,-4,3,3);ctx.fillStyle='#5fd18a';ctx.fillRect(2,-2,3,3);}
+  else{ctx.scale(2,2);ctx.rotate(t*10*(p.team===0?1:-1));ctx.strokeStyle='#171d2b';ctx.lineWidth=1.6;ctx.fillStyle='#b9c8d6';
+    if(k==='pan'){ctx.beginPath();ctx.arc(0,0,6,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.fillStyle='#805531';ctx.fillRect(5,-2,11,4);}
+    else if(k==='pot'){ctx.fillRect(-7,-5,14,10);ctx.strokeRect(-7,-5,14,10);ctx.fillStyle='#e5edf3';ctx.fillRect(-9,-7,18,3);ctx.fillRect(-10,-2,3,4);ctx.fillRect(7,-2,3,4);}
+    else{ctx.fillStyle='#bc8c52';ctx.fillRect(-10,-2,17,4);ctx.fillRect(5,-5,7,10);ctx.strokeRect(5,-5,7,10);}}
+  ctx.restore();
+}
+const _dr=window.draw;
+if(typeof _dr==='function')window.draw=function(){
+  const sw=[];
+  try{if(S&&S.proj)for(const p of S.proj){if(p.dead||BIGK.indexOf(p.kind)<0)continue;sw.push([p,p.kind,p.text]);const k=p.kind;p.kind='words';p.text={length:0,toString(){try{bigSprite(p,k);}catch(e){}return ' ';}};}}catch(e){}
+  try{return _dr.apply(this,arguments);}finally{for(const [p,k,t] of sw){p.kind=k;p.text=t;}}
 };
 const _du=window.drawUnit;
 if(typeof _du==='function')window.drawUnit=function(u){
