@@ -5614,6 +5614,8 @@ const _sfx0=window.sfx;if(typeof _sfx0==='function')window.sfx=function(k){if(k=
 const THROWK=['stone','pan','pot','spatula','food'];
 const sideB=tm=>tm===0?L.b0:tm===1?L.b1:L.burst;
 window.hurt=function(t,d,src){
+  try{if(t&&t._bt&&t.hp>0&&d>=t.hp&&S&&!S.over){ // benteng tidak jatuh sebelum Poli sampai
+    if(!S.units.some(o=>o.team===1&&o.type==='poli'&&!o.dying&&!o.riding&&Math.abs(o.x-t.x)<230))d=Math.max(0,t.hp-1);}}catch(e){}
   const plain=src&&(src.type==='prajurit'||src.type==='pemanah'||src.type==='poli')&&!src.hero&&!src.d?.boss;
   let cn=false;if(src&&src.type==='cannon'&&t&&!t.core&&!t.tower&&!t.gate){if(t._cw>0)return;t._cw=8;cn=true;d=Math.max(d,28*((S&&S.st&&S.st.mult)||1));}
   const sb=(cn||L.force||(src&&(src._sk>0||src._thr>0))||(!src&&t&&t.burn>0)||(src&&src.type==='train'))?1:0;
@@ -5726,7 +5728,7 @@ if(typeof _cu==='function')window.callUpdate=function(dt){const G=(L.guards||[])
 const _ng=window.newGame;
 if(typeof _ng==='function')window.newGame=function(){
   const r=_ng.apply(this,arguments);
-  L.later=[];L.bt={x:120,hp:700,max:700,fl:0};L.pk=0;L.bikes=[];L.wd=[];L.pud=[];L.adv=0;L.th=0;L.b0=0;L.b1=0;L.burst=0;L.spirit=0;L.q.length=0;L.at0=0;L.at1=0;
+  L.btDown=false;L.win=0;L.winDone=0;L.later=[];L.bt={x:120,hp:700,max:700,fl:0};L.pk=0;L.bikes=[];L.wd=[];L.pud=[];L.adv=0;L.th=0;L.b0=0;L.b1=0;L.burst=0;L.spirit=0;L.q.length=0;L.at0=0;L.at1=0;
   try{L.guards=[];for(let i=0;i<6;i++){const g=window.mk('prajurit',0,70+(i>>1)*34,i%3,1,undefined);if(g){g.max=g.hp=Math.round(g.max*3);g.x=70+(i>>1)*34;g._home=g.x;g._bt=1;g.oy=((i&1)?14:-14);g.y=LANEY[g.lane]+g.oy;L.guards.push(g);}}}catch(e){}
   try{{let pj=0,pw=0;for(let i=0;i<12;i++){const w=i%3===2;window.mk(w?'pemanah':'prajurit',0,SPAWNX,w?(pw++)%3:(pj++)%3,1,w?{pejuwatiRole:'front'}:undefined);}}}catch(e){}
   return r;
@@ -5843,7 +5845,7 @@ window.update=function(dt){const r=_u4.apply(this,arguments);
     for(const d of D)if(d.x>pf-170)d.x=Math.max(2,d.x+mv);
   }catch(e){}
   return r;};
-const VTAG='b2686';
+const VTAG='b2687';
 function tagTitle(){try{const o=document.getElementById('overlay');const bx=o&&o.querySelector('.box');if(bx&&bx.querySelector('h1')&&!bx.querySelector('.vtag')){const d=document.createElement('div');d.className='vtag';d.style.cssText='margin-top:10px;font:11px monospace;color:#8fa3b8;opacity:.85';d.textContent='Versi TikTok LIVE · '+VTAG;bx.appendChild(d);}}catch(e){}}
 const _ts=window.titleScreen;
 if(typeof _ts==='function')window.titleScreen=function(){const r=_ts.apply(this,arguments);tagTitle();return r;};
