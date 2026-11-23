@@ -2108,7 +2108,7 @@ function lobSpecial(team,force){try{const sp=S.units.filter(u=>u.team===team&&!u
 function stepDash(dt){try{if(!L.dash||!L.dash.length||!S||S.over||S.paused)return;
   for(const o of L.dash){const a=o.a,t=o.t;o.life-=dt;if(!a||a.dying||a.hp<=0){o.life=0;continue;}
     if(!t||t.dying||t.hp<=0||t.riding){o.life=0;continue;}
-    const dx=t.x-a.x,dir=Math.sign(dx)||1;if(Math.abs(dx)>34){a.x+=dir*Math.min(Math.abs(dx)-30,520*dt);a.mv=.15;a.wd=(a.wd||0)+520*dt;}
+    const dx=t.x-a.x,dir=Math.sign(dx)||1;if(Math.abs(dx)>34){const st=Math.min(Math.abs(dx)-30,420*dt);a.x+=dir*st;a.mv=.15;a.wd=(a.wd||0)+st*2.4;}
     else{a.atk=.28;a._st=.5;L.fxT=.6;sfx('hit');FH(t,Math.max(60,(a.dmg||38)*3),a);try{pushUnit(t,60,0,a);}catch(e){}burst(t.x,t.y-30,'#ffffff',10,110);ring(t.x,t.y,60,'#7fb4ff');o.life=0;}}
   L.dash=L.dash.filter(o=>o.life>0);}catch(e){}}
 function frontBlast(){try{const D=S.units.filter(u=>u.team===0&&!u.dying&&!u.riding&&!u.exiting&&!u.tower&&!u.core&&!u.gate&&!u.hero&&!(u.d&&u.d.boss)).sort((x,y)=>y.x-x.x).slice(0,7);
@@ -2440,7 +2440,12 @@ window.update=function(dt){const r=_u3.apply(this,arguments);
       }
     L.routCd=Math.max(0,L.routCd-dt);
     {const dm0=S.units.filter(o=>o.team===0&&!o.dying&&!o.riding&&!o.hero&&!o.d?.boss&&!o.gone);
-      if(!(L.win>0)&&!S.over&&L.guards&&L.guards.length&&!L.guards.some(g=>g.hp>0&&!g.dying)&&L.routCd<=0){L.win=7;L.winDone=0;L.routCd=10;winBanner('REZIM MENANG!','Benteng Rakyat hancur');try{sfx('win');}catch(e){}}
+      if(!L.btDown&&!S.over&&L.guards&&L.guards.length&&!L.guards.some(g=>g.hp>0&&!g.dying)){L.btDown=true;try{winBanner('BENTENG RAKYAT HANCUR!','Pasukan maju kuasai pojok kiri');setTimeout(()=>{try{winBanner('');}catch(e){}},2600);sfx('win');}catch(e){}}
+      if(L.btDown&&!(L.win>0)&&!S.over){
+        for(const d of S.units){if(d.team!==0||d.dying||d.riding||d.core||d.tower||d.gate||d.gone)continue;d.flee=Math.max(d.flee||0,1);d._home=null;d.x-=420*dt;d.mv=.15;d.back=0;if(d.x<4)d.gone=true;}
+        const P=S.units.filter(u=>u.team===1&&u.type==='poli'&&!u.dying&&!u.riding&&!u.exiting&&!u.yardGuard);
+        P.forEach((u,i)=>{const tx=150+(i%9)*30;if(u.x>tx){u.x-=130*dt;u.mv=.15;}});
+        if(P.length&&P.filter(u=>u.x<460).length>=Math.min(10,Math.ceil(P.length*.5))){L.win=7;L.winDone=0;L.routCd=10;winBanner('REZIM MENANG!','Pojok kiri dikuasai');try{sfx('win');}catch(e){}}}
       if(false){ // Poli sudah menguasai pojok kiri: demonstran tidak diisi lagi, menang setelah semuanya habis
         if(S.sq&&S.sq.length)S.sq=S.sq.filter(q=>q.team!==0);if(S.callq&&S.callq.length)S.callq.length=0;
         if(false){L.win=7;L.winDone=0;L.routCd=10;winBanner('REZIM MENANG!','Demonstran di pojok habis');try{sfx('win');}catch(e){}}}
@@ -2536,7 +2541,7 @@ window.update=function(dt){
       else if(c.st==='talk'&&c.t>3)c.t=9;}
     if(S.proj&&S.proj.length)S.proj=S.proj.filter(p=>p.kind==='godaiFire'||p._hi||(sideB(p.team)>0&&(THROWK.indexOf(p.kind)<0||L.th>0)));
     L.spirit=Math.max(0,(L.spirit||0)-dt);L.b0=Math.max(0,L.b0-dt);L.b1=Math.max(0,L.b1-dt);L.burst=Math.max(L.b0,L.b1);L.qt-=dt;
-    if(L.qt<=0&&L.q.length){L.qt=Math.max(.15,.5-L.q.length*.004);apply(L.q.shift());}
+    if(L.qt<=0&&L.q.length){{const n=L.q.length;L.qt=n>24?.05:n>10?.1:n>3?.16:.22;apply(L.q.shift());}}
     // asap menyelimuti demonstran -> aparat bisa maju
     if(S.smokes&&S.smokes.some(m=>m.ph!==0)){
       const att=S.units.filter(u=>u.team===0&&!u.dying&&!u.riding),lead=att.length?Math.max(...att.map(u=>u.x)):0,k=Math.min(3,S.smokes.length);
