@@ -5678,8 +5678,8 @@ const _dtv=window.drawTV;
 if(typeof _dtv==='function')window.drawTV=function(){
   if(!S)return;const l=newsLayout();if(l.pt)return _dtv.apply(this,arguments);
   const k=1.2;ctx.save();ctx.setTransform(l.dpr,0,0,l.dpr,0,0);ctx.globalAlpha=.92;
-  ctx.save();ctx.translate(6,6);ctx.scale(k,k);ctx.translate(-8,-8);drawTVp(S.tvL,8,8,l.w,l.h,'L');ctx.restore();
-  const rx=l.sw-6;ctx.save();ctx.translate(rx,6);ctx.scale(k,k);ctx.translate(-(l.sw-8),-8);drawTVp(S.tvR,l.sw-8-l.w,8,l.w,l.h,'R');ctx.restore();
+  ctx.save();ctx.translate(6,6);ctx.scale(k,k);ctx.translate(-8,-8);const w2=l.w*.74;drawTVp(S.tvL,8,8,w2,l.h,'L');ctx.restore();
+  const rx=l.sw-6;ctx.save();ctx.translate(rx,6);ctx.scale(k,k);ctx.translate(-(l.sw-8),-8);drawTVp(S.tvR,l.sw-8-w2,8,w2,l.h,'R');ctx.restore();
   ctx.restore();
 };
 // aura mobil: hanya 1 mobil per frame (hemat GPU, tidak lag)
@@ -5846,7 +5846,7 @@ window.update=function(dt){const r=_u4.apply(this,arguments);
     for(const d of D)if(d.x>pf-170)d.x=Math.max(2,d.x+mv);
   }catch(e){}
   return r;};
-const VTAG='b2691';
+const VTAG='b2692';
 function tagTitle(){try{const o=document.getElementById('overlay');const bx=o&&o.querySelector('.box');if(bx&&bx.querySelector('h1')&&!bx.querySelector('.vtag')){const d=document.createElement('div');d.className='vtag';d.style.cssText='margin-top:10px;font:11px monospace;color:#8fa3b8;opacity:.85';d.textContent='Versi TikTok LIVE · '+VTAG;bx.appendChild(d);}}catch(e){}}
 const _ts=window.titleScreen;
 if(typeof _ts==='function')window.titleScreen=function(){const r=_ts.apply(this,arguments);tagTitle();return r;};
