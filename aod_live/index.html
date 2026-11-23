@@ -5843,7 +5843,7 @@ window.update=function(dt){const r=_u4.apply(this,arguments);
     for(const d of D)if(d.x>pf-170)d.x=Math.max(2,d.x+mv);
   }catch(e){}
   return r;};
-const VTAG='b2674';
+const VTAG='b2686';
 function tagTitle(){try{const o=document.getElementById('overlay');const bx=o&&o.querySelector('.box');if(bx&&bx.querySelector('h1')&&!bx.querySelector('.vtag')){const d=document.createElement('div');d.className='vtag';d.style.cssText='margin-top:10px;font:11px monospace;color:#8fa3b8;opacity:.85';d.textContent='Versi TikTok LIVE · '+VTAG;bx.appendChild(d);}}catch(e){}}
 const _ts=window.titleScreen;
 if(typeof _ts==='function')window.titleScreen=function(){const r=_ts.apply(this,arguments);tagTitle();return r;};
