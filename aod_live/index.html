@@ -1961,9 +1961,11 @@ try{if(S&&!S.capture){const any=S.units.some(o=>o.team===0&&!o.dying&&!o.riding&
       L.rs0=(L.rs0||0)-dt;L.rs1=(L.rs1||0)-dt;
       const dc=S.units.filter(o=>o.team===0&&!o.dying&&!o.riding&&!o.hero&&(o.type==='prajurit'||o.type==='pemanah')).length+S.callq.length;
       const pc=S.units.filter(o=>o.team===1&&o.type==='poli'&&!o.dying).length+S.sq.filter(q=>q.team===1&&q.type==='poli').length;
-      const minD=(L.adv||0)>=1000?0:Math.min(80,Math.max(L.minP,pc));
+      const blkD=S.units.some(o=>o.team===1&&!o.dying&&!o.riding&&o.type==='poli'&&o.x<SPAWNX+300),blkP=S.units.some(o=>o.team===0&&!o.dying&&!o.riding&&!o.hero&&o.x>ESPAWN-300);
+      L.blkD=blkD;L.blkP=blkP;
+      const minD=(blkD||(L.adv||0)>=1000)?0:Math.min(80,Math.max(L.minP,pc));
       if(dc<minD&&L.rs0<=0){L.rs0=.15;for(let q=0;q<Math.min(4,minD-dc);q++){const w=Math.random()<.33;window.mk(w?'pemanah':'prajurit',0,SPAWNX,0,1,w?{pejuwatiRole:'front'}:undefined);}}
-      if(pc<L.minP&&L.rs1<=0){L.rs1=.15;for(let q=0;q<Math.min(5,L.minP-pc);q++)S.sq.push({t:0,team:1,type:'poli',l:Math.floor(Math.random()*3),m:S.st.mult,role:'front',gift:1});}
+      if(pc<L.minP&&L.rs1<=0&&!blkP){L.rs1=.15;for(let q=0;q<Math.min(5,L.minP-pc);q++)S.sq.push({t:0,team:1,type:'poli',l:Math.floor(Math.random()*3),m:S.st.mult,role:'front',gift:1});}
   }}catch(e){}
   try{L.th=Math.max(0,(L.th||0)-dt);if(S&&(sideB(0)<=0||L.th<=0)){S.proj=S.proj.filter(p=>p.kind==='godaiFire'||p._hi||p.team!==0||(sideB(0)>0&&THROWK.indexOf(p.kind)<0));for(const u of S.units)if(u.team===0&&u.type==='pemanah'&&!u.dying)u.atk=0;}
       if(S&&sideB(1)<=0)S.proj=S.proj.filter(p=>p.kind==='godaiFire'||p.team!==1);}catch(e){}
@@ -2120,7 +2122,7 @@ function strike(team){try{if(Math.random()<.3&&lobSpecial(team))return;const A=S
   best.sort((x,y)=>x[0]-y[0]);const pick=best[Math.floor(Math.random()*Math.min(4,best.length))],a=pick[1],t=pick[2];
   const dir=Math.sign(t.x-a.x)||(team===0?1:-1);a._st=.4;a.atk=.28;a.mv=.15;a.x+=dir*Math.min(24,Math.max(0,Math.abs(t.x-a.x)-28));
   L.fxT=.6;sfx('hit');
-  FH(t,Math.max(30,(a.dmg||14)*2.4),a);if(team===1)btHit(45);try{pushUnit(t,26,team,a);}catch(e){}
+  FH(t,Math.max(30,(a.dmg||14)*2.4),a);if(team===1)btHit(45);if(team===0&&a.x>(S.gate&&!S.gate.gone?S.gate.x-260:CORE_X-420)){const bt=S.gate&&!S.gate.gone?S.gate:S.core;if(bt&&!bt.gone)FH(bt,Math.max(40,(a.dmg||14)*3),a);}try{pushUnit(t,26,team,a);}catch(e){}
   burst(t.x,t.y-30,'#ffffff',8,90);ring(t.x,t.y,46,team===0?'#7fb4ff':'#ff8f8f');
   L.stp=L.stp||[0,0];L.stp[team]+=12;
 }catch(e){}}
@@ -2262,6 +2264,7 @@ window.hurt=function(t,d,src){
   const plain=src&&(src.type==='prajurit'||src.type==='pemanah'||src.type==='poli')&&!src.hero&&!src.d?.boss;
   let cn=false;if(src&&src.type==='cannon'&&t&&!t.core&&!t.tower&&!t.gate){if(t._cw>0)return;t._cw=8;cn=true;d=Math.max(d,28*((S&&S.st&&S.st.mult)||1));}
   const sb=(cn||L.force||(src&&(src._sk>0||src._thr>0))||(!src&&t&&t.burn>0)||(src&&src.type==='train'))?1:0;
+  if(sb>0&&!L.inBt&&src&&src.team===1&&t&&t.team===0&&!t._bt&&!t.core&&!t.tower&&!t.gate&&(L.adv||0)>=900&&L.guards){try{const G=L.guards.filter(g=>g.hp>0&&!g.dying);if(G.length){L.inBt=true;try{FH(G[Math.floor(Math.random()*G.length)],Math.max(20,d*.7),{team:1,_sk:3});}finally{L.inBt=false;}L.btFl=.25;}}catch(e){L.inBt=false;}}
   if(S&&!S.over&&!(sb>0)){            // SANTAI: hanya dorong-dorongan, tanpa damage / efek pukul
     if(t&&!t.core&&!t.tower&&!t.gate&&src&&src.team!==undefined&&src.team!==t.team&&!(t.dying>0)){
       try{pushUnit(t,4,src.team,src);}catch(e){}
@@ -2365,6 +2368,8 @@ if(typeof _mk==='function')window.mk=function(type,team,x,lane,m,opt){
   if(rnd0&&u){u.oy=Math.random()*40-20;u.y=LANEY[u.lane]+u.oy;}
   return u;
 };
+const _cu=window.callUpdate;
+if(typeof _cu==='function')window.callUpdate=function(dt){const G=(L.guards||[]).filter(g=>!g.riding);G.forEach(g=>{g.riding=true;});try{return _cu.apply(this,arguments);}finally{G.forEach(g=>{g.riding=false;});}};
 const _ng=window.newGame;
 if(typeof _ng==='function')window.newGame=function(){
   const r=_ng.apply(this,arguments);
@@ -2440,6 +2445,7 @@ window.update=function(dt){const r=_u3.apply(this,arguments);
         if(S.sq&&S.sq.length)S.sq=S.sq.filter(q=>q.team!==0);if(S.callq&&S.callq.length)S.callq.length=0;
         if(false){L.win=7;L.winDone=0;L.routCd=10;winBanner('REZIM MENANG!','Demonstran di pojok habis');try{sfx('win');}catch(e){}}}
       if(L.win>0){L.win-=dt;
+        for(const d of S.units){if(d.team!==0||d.dying||d.riding||d.core||d.tower||d.gate||d.gone)continue;d.flee=Math.max(d.flee||0,1);d._home=null;d.x-=520*dt;d.mv=.15;d.back=0;if(d.x<4){d.gone=true;}}
         if(L.win<=0&&!S.over){winBanner('');S.over=true;S.win=false;
           try{showOverlay('<h1>REZIM MENANG</h1><h2>Demonstran dipukul mundur sampai pojok</h2><p>Perlawanan di pojok kiri habis. Waktu '+fmt(S.time)+', sisa nyawa '+S.lives+'.</p><button onclick="newGame('+S.stage+')">MAIN LAGI</button><button onclick="titleScreen()">MENU</button>');}catch(e){}}}}
     L.laneT-=dt;
