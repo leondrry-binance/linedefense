@@ -5558,11 +5558,11 @@ function shadowOjol(){try{
   tvF('L','bewok','tertawa','Pasukan ojol bayangan turun ke jalan','Makin banyak gift, makin banyak ojol');toast('Pasukan ojol bayangan!');
   for(let i=0;i<6;i++){const lane=i%3,x=Math.max(20,pf-45-Math.random()*70);
     const u=window.mk('prajurit',0,x,lane,1,{noNear:true});if(!u)continue;
-    u._shd=20;u._oj=5;u._sk=.5;u.dmg=(u.dmg||8)*1.5;u.hp=u.max=(u.max||30)*1.6;u.x=x;ring(u.x,u.y,60,'#19b84f');
+    u._shd=20;u._oj=5;u._sk=.5;u.dmg=(u.dmg||8)*3;u._shhp=u.hp;u.x=x;ring(u.x,u.y,60,'#19b84f');
     for(let q=0;q<10;q++){const a=Math.random()*6.28;S.fx.push({x:u.x,y:u.y-20,vx:Math.cos(a)*70,vy:Math.sin(a)*70-60,life:.6,max:.6,col:'#19b84f'});}}
   S.shake=Math.max(S.shake||0,.25);sfx('spawn');
 }catch(e){}}
-function updShadow(dt){for(const u of S.units){if(!(u._shd>0)||u.dying)continue;u._shd-=dt;u._oj=5;u._sk=Math.max(u._sk||0,.3);L.b0=Math.max(L.b0||0,6);
+function updShadow(dt){for(const u of S.units){if(!(u._shd>0)||u.dying)continue;if(u._shhp!=null&&u.hp<u._shhp){u._shd-=(u._shhp-u.hp)/Math.max(1,u.max)*14;}u._shhp=u.hp;u._shd-=dt;u._oj=5;u._sk=Math.max(u._sk||0,.3);L.b0=Math.max(L.b0||0,6);
     if(u._shd<=0){ring(u.x,u.y,50,'#19b84f');for(let q=0;q<8;q++){const a=Math.random()*6.28;S.fx.push({x:u.x,y:u.y-20,vx:Math.cos(a)*50,vy:Math.sin(a)*50-40,life:.5,max:.5,col:'#19b84f'});}u.hp=0;u.dying=.01;u.gone=true;}}}
 function updBikes(dt){const bs=L.bikes;if(!bs||!bs.length)return;
   for(const b of bs){const u=b.u;if(!u||u.dying||u.hp<=0){b.dead=true;if(u)u._ride=false;continue;}
@@ -5879,7 +5879,7 @@ window.update=function(dt){const r=_u4.apply(this,arguments);
     for(const d of D)if(d.x>pf-170)d.x=Math.max(2,d.x+mv);
   }catch(e){}
   return r;};
-const VTAG='b2701';
+const VTAG='b2702';
 function tagTitle(){try{const o=document.getElementById('overlay');const bx=o&&o.querySelector('.box');if(bx&&bx.querySelector('h1')&&!bx.querySelector('.vtag')){const d=document.createElement('div');d.className='vtag';d.style.cssText='margin-top:10px;font:11px monospace;color:#8fa3b8;opacity:.85';d.textContent='Versi TikTok LIVE · '+VTAG;bx.appendChild(d);}}catch(e){}}
 const _ts=window.titleScreen;
 if(typeof _ts==='function')window.titleScreen=function(){const r=_ts.apply(this,arguments);tagTitle();return r;};
