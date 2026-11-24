@@ -5557,9 +5557,11 @@ function shadowOjol(){try{
   const have=S.units.filter(u=>u._shd>0&&!u.dying).length;if(have>=60)return;
   const fd=Math.max(0,...S.units.filter(u=>u.team===0&&!u.dying&&!u.riding&&!u.hero&&!u.tower&&!u.core&&!u.gate&&!(u._shd>0)).map(u=>u.x));
   tvF('L','bewok','tertawa','Pasukan ojol bayangan turun ke jalan','Makin banyak gift, makin banyak ojol');toast('Pasukan ojol bayangan!');
-  for(let i=0;i<6;i++){const lane=i%3,x=Math.max(20,Math.min(pf-14,Math.max(fd+10,pf-60)+Math.random()*34));
-    const u=window.mk('prajurit',0,x,lane,1,{noNear:true});if(!u)continue;
-    u._shd=20;u._oj=5;u._sk=.5;u.dmg=(u.dmg||8)*3;u._shhp=u.hp;u.x=x;ring(u.x,u.y,60,'#19b84f');
+  const m=Math.min(S.morale[1],15);S.morale[1]-=m;S.morale[0]=100-S.morale[1];if(m>0)floatText(pf,LANEY[1]-130,'Moral aparat -'+m,'#ff7a7a');
+  for(let i=0;i<6;i++){let lane=i%3,x=Math.max(20,Math.min(pf-14,Math.max(fd+10,pf-60)+Math.random()*34)),yy=null;
+    if(i>=2&&po.length){const o=po[Math.floor(Math.random()*po.length)];lane=o.lane;x=Math.min(WW-20,o.x-14+Math.random()*28);yy=o.y+(Math.random()<.5?-16:16);}   // tiba-tiba muncul di tengah lawan
+    const u=window.mk('prajurit',0,x,lane,1,{noNear:true});if(!u)continue;if(yy!=null){u.y=yy;u.oy=yy-LANEY[lane];}
+    u._shd=20;u._oj=5;u._sk=.5;u.dmg=(u.dmg||8)*3;u._shhp=u.hp;u.x=x;ring(u.x,u.y,60,'#19b84f');if(yy!=null){ring(u.x,u.y,95,'#0d6b2f');S.fx.push({text:'?!',x:u.x-6,y:u.y-70,life:.9,max:.9,col:'#ff4d4d'});}
     for(let q=0;q<10;q++){const a=Math.random()*6.28;S.fx.push({x:u.x,y:u.y-20,vx:Math.cos(a)*70,vy:Math.sin(a)*70-60,life:.6,max:.6,col:'#19b84f'});}}
   S.shake=Math.max(S.shake||0,.25);sfx('spawn');
 }catch(e){}}
@@ -5880,7 +5882,7 @@ window.update=function(dt){const r=_u4.apply(this,arguments);
     for(const d of D)if(d.x>pf-170)d.x=Math.max(2,d.x+mv);
   }catch(e){}
   return r;};
-const VTAG='b2703';
+const VTAG='b2704';
 function tagTitle(){try{const o=document.getElementById('overlay');const bx=o&&o.querySelector('.box');if(bx&&bx.querySelector('h1')&&!bx.querySelector('.vtag')){const d=document.createElement('div');d.className='vtag';d.style.cssText='margin-top:10px;font:11px monospace;color:#8fa3b8;opacity:.85';d.textContent='Versi TikTok LIVE · '+VTAG;bx.appendChild(d);}}catch(e){}}
 const _ts=window.titleScreen;
 if(typeof _ts==='function')window.titleScreen=function(){const r=_ts.apply(this,arguments);tagTitle();return r;};
