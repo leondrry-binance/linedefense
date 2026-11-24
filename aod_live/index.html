@@ -5289,17 +5289,19 @@ function addFeed(g){
   setTimeout(()=>{e.style.opacity=0;setTimeout(()=>e.remove(),500);},4000);
 }
 const _u2=window.update;
-window.update=function(dt){const r=_u2.apply(this,arguments);
+window.update=function(dt){let _sp=null;try{_sp=S&&S.units.filter(u=>u._shd>0&&!u.dying).map(u=>[u,u.x]);}catch(e){}
+  const r=_u2.apply(this,arguments);
+  try{if(_sp)for(const [u,px] of _sp){if(!u.dying&&u.x<px-25)u.x=px;}}catch(e){}   // ojol bayangan boleh masuk halaman gedung (dekat Raja Jaua)
   try{if(S&&!S.capture){const P=S.units.filter(o=>o.team===1&&o.type==='poli'&&!o.dying&&!o.riding&&!o.exiting&&!o.yardGuard);
   if(S.gate&&S.gate.gone){L.gt=(L.gt||0)-dt;for(const o of S.units)if(o.team===1&&o.type==='poli'&&!o.yardGuard&&!o.dying&&o.defenseRole!=='rear')o.defenseRole='rear';
     if(L.gt<=0){L.gt=2;try{if(typeof yardPolice==='function'&&yardPolice().length<4)rechargeYard('penjaga');}catch(e){}}}
   const PA=S.units.filter(o=>o.team===1&&o.type==='poli'&&!o.dying&&!o.riding&&!o.exiting);
   if(P.length>=3){const pf=Math.min(...(S.gate&&S.gate.gone?PA:P).map(o=>o.x));
-    for(const d of S.units){if(d.team!==0||d.dying||d.riding||d.exiting||d.hero||d.d?.boss||d.tower||d.core||d.gate)continue;
+    for(const d of S.units){if(d.team!==0||d.dying||d.riding||d.exiting||d.hero||d.d?.boss||d.tower||d.core||d.gate||d._shd>0)continue;
       if(d.x>pf+30){d.x=Math.max(pf-10,d.x-520*dt);d.policePush=0;}}
     if(sideB(1)>0&&sideB(0)<=0){const v=(5+Math.max(0,S.morale[1]-40)*.1)*dt*(L.wet>0?1.5:1);
       for(const o of P){const nx=Math.max(30,o.x-v);if(nx<o.x){o.mv=.15;o.wd=(o.wd||0)+(o.x-nx);}o.x=nx;}L.adv=Math.min(1250,(L.adv||0)+v*.9);
-      for(const d of S.units){if(d.team!==0||d.dying||d.riding||d.exiting||d.hero||d.d?.boss||d.tower||d.core||d.gate)continue;
+      for(const d of S.units){if(d.team!==0||d.dying||d.riding||d.exiting||d.hero||d.d?.boss||d.tower||d.core||d.gate||d._shd>0)continue;
         if(d.x<pf+90)d.x=Math.max(2,d.x-v*1.15);}}}}}catch(e){}
 try{if(S&&!S.capture){const any=S.units.some(o=>o.team===0&&!o.dying&&!o.riding&&!o.exiting);
       if(!any)L.adv=Math.min(1250,(L.adv||0)+5*dt);
@@ -5488,7 +5490,7 @@ function strike(team){try{if(Math.random()<.3&&lobSpecial(team))return;const A=S
 function stepAdv(dt){try{if(!S||S.capture||S.over||S.paused)return;L.stp=L.stp||[0,0];
   if(L.stp[1]>0){const v=Math.min(L.stp[1],70*dt);L.stp[1]-=v;const P=S.units.filter(o=>o.team===1&&o.type==='poli'&&!o.dying&&!o.riding&&!o.exiting&&!o.yardGuard);
     if(P.length){const pf=Math.min(...P.map(o=>o.x));for(const o of P){const nx=Math.max(30,o.x-v);if(nx<o.x){o.mv=.15;o.wd=(o.wd||0)+(o.x-nx);}o.x=nx;}
-      for(const d of S.units){if(d.team!==0||d.dying||d.riding||d.exiting||d.hero||d.d?.boss||d.tower||d.core||d.gate)continue;if(d.x<pf+90)d.x=Math.max(2,d.x-v*1.15);}}
+      for(const d of S.units){if(d.team!==0||d.dying||d.riding||d.exiting||d.hero||d.d?.boss||d.tower||d.core||d.gate||d._shd>0)continue;if(d.x<pf+90)d.x=Math.max(2,d.x-v*1.15);}}
     L.adv=Math.min(1250,(L.adv||0)+v*.9);}
   if(L.stp[0]>0){const v=Math.min(L.stp[0],70*dt);L.stp[0]-=v;L.adv=Math.max(-200,(L.adv||0)-v*.9);}
 }catch(e){}}
@@ -5567,7 +5569,13 @@ function shadowOjol(){try{
   S.shake=Math.max(S.shake||0,.25);sfx('spawn');
 }catch(e){}}
 function isoC(u){return !S.units.some(o=>o.team===0&&!o._shd&&!o.dying&&!o.riding&&!o.hero&&!o.tower&&!o.core&&!o.gate&&Math.abs(o.x-u.x)<260);}
-function updShadow(dt){for(const u of S.units){if(!(u._shd>0)||u.dying)continue;if(u._shhp!=null&&u.hp<u._shhp){u._shd-=(u._shhp-u.hp)/Math.max(1,u.max)*14;}u._shhp=u.hp;u._shd-=dt;u._oj=5;u._sk=Math.max(u._sk||0,.3);L.b0=Math.max(L.b0||0,6);
+function shadowAI(u,dt){ // ojol bayangan: kejar & hantam musuh hidup terdekat (termasuk bos di halaman gedung)
+  try{u._ac=(u._ac||0)-dt;let t=null,bd=1e9;
+    for(const o of S.units){if(o.team!==1||o.dying||o.riding||o.tower||o.core||o.gate||o.gone||o.hp<=0)continue;const d=Math.hypot(o.x-u.x,(o.y-u.y)*1.4);if(d<bd){bd=d;t=o;}}
+    if(!t||bd>520)return;
+    if(bd>62){const dir=Math.sign(t.x-u.x)||1;u.x=Math.max(4,Math.min(WW-6,u.x+dir*120*dt));u.mv=.15;u.y+=Math.max(-40*dt,Math.min(40*dt,t.y-u.y));u.oy=u.y-LANEY[u.lane];u.atk=0;}
+    else if(u._ac<=0){u._ac=.55;u.atk=.28;FH(t,u.dmg||20,u);if(!t.hero&&!(t.d&&t.d.boss)&&t.type==='poli')t.x=Math.min(WW-6,t.x+14);}}catch(e){}}
+function updShadow(dt){for(const u of S.units){if(!(u._shd>0)||u.dying)continue;shadowAI(u,dt);if(u._shhp!=null&&u.hp<u._shhp){u._shd-=(u._shhp-u.hp)/Math.max(1,u.max)*14;}u._shhp=u.hp;u._shd-=dt;u._oj=5;u._sk=Math.max(u._sk||0,.3);L.b0=Math.max(L.b0||0,6);
     if(u._shd<=0){ring(u.x,u.y,50,'#19b84f');for(let q=0;q<8;q++){const a=Math.random()*6.28;S.fx.push({x:u.x,y:u.y-20,vx:Math.cos(a)*50,vy:Math.sin(a)*50-40,life:.5,max:.5,col:'#19b84f'});}u.hp=0;u.dying=.01;u.gone=true;}}}
 function updBikes(dt){const bs=L.bikes;if(!bs||!bs.length)return;
   for(const b of bs){const u=b.u;if(!u||u.dying||u.hp<=0){b.dead=true;if(u)u._ride=false;continue;}
@@ -5887,7 +5895,7 @@ window.update=function(dt){const r=_u4.apply(this,arguments);
     for(const d of D)if(d.x>pf-170)d.x=Math.max(2,d.x+mv);
   }catch(e){}
   return r;};
-const VTAG='b2710';
+const VTAG='b2713';
 function tagTitle(){try{const o=document.getElementById('overlay');const bx=o&&o.querySelector('.box');if(bx&&bx.querySelector('h1')&&!bx.querySelector('.vtag')){const d=document.createElement('div');d.className='vtag';d.style.cssText='margin-top:10px;font:11px monospace;color:#8fa3b8;opacity:.85';d.textContent='Versi TikTok LIVE · '+VTAG;bx.appendChild(d);}}catch(e){}}
 const _ts=window.titleScreen;
 if(typeof _ts==='function')window.titleScreen=function(){const r=_ts.apply(this,arguments);tagTitle();return r;};
