@@ -5653,7 +5653,7 @@ const THROWK=['stone','pan','pot','spatula','food'];
 const sideB=tm=>tm===0?L.b0:tm===1?L.b1:L.burst;
 window.hurt=function(t,d,src){
   try{if(src&&src._shd>0&&t&&((t.gate||t.core||t.tower)&&isoC(src)))return;}catch(e){}
-  try{if(t&&t.gate&&S&&!S.over&&(!src||src.team!==0||Math.abs((src.x||0)-t.x)>260))return;}catch(e){}   // gerbang hanya terluka oleh demonstran/influencer yang menyerang dari dekat
+  try{if(t&&t.gate&&S&&!S.over&&(!src||src.team!==0))return;}catch(e){}   // gerbang: tanpa pelaku (api liar) tidak terluka; serangan jauh hanya jika benar-benar mengenai gerbang (ledakan di posisi gerbang)
   try{if(t&&t.gate&&src&&src.team===0){if(src._shd>0){if((S.time-(L.gcT||-9))<.35)return;L.gcT=S.time;}d=Math.min(d,src._shd>0?12:45);}}catch(e){}   // gerbang: tidak anjlok mendadak oleh satu hantaman
   try{if(t&&t._bt&&t.hp>0&&d>=t.hp&&S&&!S.over){ // benteng tidak jatuh sebelum Poli sampai
     if(!S.units.some(o=>o.team===1&&o.type==='poli'&&!o.dying&&!o.riding&&Math.abs(o.x-t.x)<230))d=Math.max(0,t.hp-1);}}catch(e){}
@@ -5887,7 +5887,7 @@ window.update=function(dt){const r=_u4.apply(this,arguments);
     for(const d of D)if(d.x>pf-170)d.x=Math.max(2,d.x+mv);
   }catch(e){}
   return r;};
-const VTAG='b2709';
+const VTAG='b2710';
 function tagTitle(){try{const o=document.getElementById('overlay');const bx=o&&o.querySelector('.box');if(bx&&bx.querySelector('h1')&&!bx.querySelector('.vtag')){const d=document.createElement('div');d.className='vtag';d.style.cssText='margin-top:10px;font:11px monospace;color:#8fa3b8;opacity:.85';d.textContent='Versi TikTok LIVE · '+VTAG;bx.appendChild(d);}}catch(e){}}
 const _ts=window.titleScreen;
 if(typeof _ts==='function')window.titleScreen=function(){const r=_ts.apply(this,arguments);tagTitle();return r;};
