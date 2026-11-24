@@ -5847,7 +5847,7 @@ window.update=function(dt){const r=_u4.apply(this,arguments);
     for(const d of D)if(d.x>pf-170)d.x=Math.max(2,d.x+mv);
   }catch(e){}
   return r;};
-const VTAG='b2695';
+const VTAG='b2696';
 function tagTitle(){try{const o=document.getElementById('overlay');const bx=o&&o.querySelector('.box');if(bx&&bx.querySelector('h1')&&!bx.querySelector('.vtag')){const d=document.createElement('div');d.className='vtag';d.style.cssText='margin-top:10px;font:11px monospace;color:#8fa3b8;opacity:.85';d.textContent='Versi TikTok LIVE · '+VTAG;bx.appendChild(d);}}catch(e){}}
 const _ts=window.titleScreen;
 if(typeof _ts==='function')window.titleScreen=function(){const r=_ts.apply(this,arguments);tagTitle();return r;};
@@ -5916,6 +5916,7 @@ window.update=function(dt){
   return _upd.apply(this,arguments);
 };
 setInterval(()=>{
+  try{const off=!!(typeof S!=='undefined'&&S&&S.capture&&!S.capture.done);document.querySelectorAll('#giftPad button').forEach(b=>{if(b.disabled!==off)b.disabled=off;});}catch(e){}
   const a=[];if(L.b0>0)a.push('DEMO '+Math.ceil(L.b0)+'d');if(L.b1>0)a.push('POLI '+Math.ceil(L.b1)+'d');
   if(a.length){state.className='hot';state.textContent='● LIVE · ⚔ '+a.join(' · ')+(L.q.length?' · antre '+L.q.length:'');}
   else{state.className='calm';state.textContent='● LIVE · Santai · kirim gift untuk menyerang'+(L.q.length?' · antre '+L.q.length:'');}
