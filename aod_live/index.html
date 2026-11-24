@@ -5278,7 +5278,7 @@ const tierOf=c=>TIERS.find(t=>c>=t[0])||TIERS[TIERS.length-1];
 const norm=n=>String(n).toLowerCase().replace(/[^a-z]/g,'');
 const findG=n=>GL.find(x=>norm(x[0])===norm(n)||(norm(n)==='mawar'&&x[0]==='Rose')||(norm(n)==='kopi'&&x[0]==='Coffee'));
 const sideOf=g=>{const f=findG(g.name);if(f)return f[2];let h=0;for(const ch of norm(g.name))h=(h*31+ch.charCodeAt(0))|0;return Math.abs(h)%2;};
-const DESC={0:{dasar:'Pejuang menyerang',kecil:'Pejuwati lempar batu & peralatan',sedang:'Lempar botol api',kuat:'Roki Girang: sindiran pedas',ulti:'Ferdi Irwan dipanggil (ojol tabrak)',epik:'Retrobro: kembang api, Poli mundur & moral turun',besar:'Pasukan ojol bayangan 15 detik'},
+const DESC={0:{dasar:'Pejuang menyerang',kecil:'Pejuwati lempar batu & peralatan',sedang:'Lempar botol api',kuat:'Roki Girang: sindiran pedas',ulti:'Ferdi Irwan dipanggil (ojol tabrak)',epik:'Retrobro: kembang api, Poli mundur & moral turun',besar:'Pasukan ojol bayangan 20 detik'},
             1:{dasar:'Poli menyerang',kecil:'Poli semprot air',sedang:'Bom asap dilempar',kuat:'Ratu Pajak: demonstran pusing',ulti:'Water cannon besar',epik:'Skill Raja Jaua',besar:'Raja Jaua: WHOOZZ!'}};
 const descOf=g=>DESC[sideOf(g)][tierOf(g.coins)[1]];
 const icon=(c,g)=>{const f=g&&findG(g.name);return f?f[3]:(sideOf(g||{name:'',coins:c})?'\u{1F6E1}':'\u{1F381}');};
@@ -5556,9 +5556,9 @@ function shadowOjol(){try{
   const po=S.units.filter(u=>u.team===1&&u.type==='poli'&&!u.dying&&!u.riding);const pf=Math.min(...po.map(u=>u.x).concat([900]));
   const have=S.units.filter(u=>u._shd>0&&!u.dying).length;if(have>=60)return;
   tvF('L','bewok','tertawa','Pasukan ojol bayangan turun ke jalan','Makin banyak gift, makin banyak ojol');toast('Pasukan ojol bayangan!');
-  for(let i=0;i<6;i++){const lane=i%3,x=Math.max(20,pf-90-Math.random()*220);
+  for(let i=0;i<6;i++){const lane=i%3,x=Math.max(20,pf-45-Math.random()*70);
     const u=window.mk('prajurit',0,x,lane,1,{noNear:true});if(!u)continue;
-    u._shd=15;u._oj=5;u._sk=.5;u.dmg=(u.dmg||8)*1.5;u.hp=u.max=(u.max||30)*1.6;u.x=x;ring(u.x,u.y,60,'#19b84f');
+    u._shd=20;u._oj=5;u._sk=.5;u.dmg=(u.dmg||8)*1.5;u.hp=u.max=(u.max||30)*1.6;u.x=x;ring(u.x,u.y,60,'#19b84f');
     for(let q=0;q<10;q++){const a=Math.random()*6.28;S.fx.push({x:u.x,y:u.y-20,vx:Math.cos(a)*70,vy:Math.sin(a)*70-60,life:.6,max:.6,col:'#19b84f'});}}
   S.shake=Math.max(S.shake||0,.25);sfx('spawn');
 }catch(e){}}
@@ -5879,7 +5879,7 @@ window.update=function(dt){const r=_u4.apply(this,arguments);
     for(const d of D)if(d.x>pf-170)d.x=Math.max(2,d.x+mv);
   }catch(e){}
   return r;};
-const VTAG='b2700';
+const VTAG='b2701';
 function tagTitle(){try{const o=document.getElementById('overlay');const bx=o&&o.querySelector('.box');if(bx&&bx.querySelector('h1')&&!bx.querySelector('.vtag')){const d=document.createElement('div');d.className='vtag';d.style.cssText='margin-top:10px;font:11px monospace;color:#8fa3b8;opacity:.85';d.textContent='Versi TikTok LIVE · '+VTAG;bx.appendChild(d);}}catch(e){}}
 const _ts=window.titleScreen;
 if(typeof _ts==='function')window.titleScreen=function(){const r=_ts.apply(this,arguments);tagTitle();return r;};
