@@ -5553,10 +5553,11 @@ function fireworksGift(){try{
     floatText(fx0+160,y0-150,'Poli mundur! Moral -'+m,'#ffd166');}catch(e){}});
 }catch(e){}}
 function shadowOjol(){try{
-  const po=S.units.filter(u=>u.team===1&&u.type==='poli'&&!u.dying&&!u.riding);const pf=Math.min(...po.map(u=>u.x).concat([900]));
+  const po=S.units.filter(u=>u.team===1&&u.type==='poli'&&!u.dying&&!u.riding);const pf=po.length?Math.min(...po.map(u=>u.x)):900;
   const have=S.units.filter(u=>u._shd>0&&!u.dying).length;if(have>=60)return;
+  const fd=Math.max(0,...S.units.filter(u=>u.team===0&&!u.dying&&!u.riding&&!u.hero&&!u.tower&&!u.core&&!u.gate&&!(u._shd>0)).map(u=>u.x));
   tvF('L','bewok','tertawa','Pasukan ojol bayangan turun ke jalan','Makin banyak gift, makin banyak ojol');toast('Pasukan ojol bayangan!');
-  for(let i=0;i<6;i++){const lane=i%3,x=Math.max(20,pf-45-Math.random()*70);
+  for(let i=0;i<6;i++){const lane=i%3,x=Math.max(20,Math.min(pf-14,Math.max(fd+10,pf-60)+Math.random()*34));
     const u=window.mk('prajurit',0,x,lane,1,{noNear:true});if(!u)continue;
     u._shd=20;u._oj=5;u._sk=.5;u.dmg=(u.dmg||8)*3;u._shhp=u.hp;u.x=x;ring(u.x,u.y,60,'#19b84f');
     for(let q=0;q<10;q++){const a=Math.random()*6.28;S.fx.push({x:u.x,y:u.y-20,vx:Math.cos(a)*70,vy:Math.sin(a)*70-60,life:.6,max:.6,col:'#19b84f'});}}
@@ -5879,7 +5880,7 @@ window.update=function(dt){const r=_u4.apply(this,arguments);
     for(const d of D)if(d.x>pf-170)d.x=Math.max(2,d.x+mv);
   }catch(e){}
   return r;};
-const VTAG='b2702';
+const VTAG='b2703';
 function tagTitle(){try{const o=document.getElementById('overlay');const bx=o&&o.querySelector('.box');if(bx&&bx.querySelector('h1')&&!bx.querySelector('.vtag')){const d=document.createElement('div');d.className='vtag';d.style.cssText='margin-top:10px;font:11px monospace;color:#8fa3b8;opacity:.85';d.textContent='Versi TikTok LIVE · '+VTAG;bx.appendChild(d);}}catch(e){}}
 const _ts=window.titleScreen;
 if(typeof _ts==='function')window.titleScreen=function(){const r=_ts.apply(this,arguments);tagTitle();return r;};
