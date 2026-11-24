@@ -5278,7 +5278,7 @@ const tierOf=c=>TIERS.find(t=>c>=t[0])||TIERS[TIERS.length-1];
 const norm=n=>String(n).toLowerCase().replace(/[^a-z]/g,'');
 const findG=n=>GL.find(x=>norm(x[0])===norm(n)||(norm(n)==='mawar'&&x[0]==='Rose')||(norm(n)==='kopi'&&x[0]==='Coffee'));
 const sideOf=g=>{const f=findG(g.name);if(f)return f[2];let h=0;for(const ch of norm(g.name))h=(h*31+ch.charCodeAt(0))|0;return Math.abs(h)%2;};
-const DESC={0:{dasar:'Pejuang menyerang',kecil:'Pejuwati lempar batu & peralatan',sedang:'Lempar botol api',kuat:'Roki Girang: sindiran pedas',ulti:'Botol api (kebakaran)',epik:'Ferdi Irwan + relawan ojol tabrak',besar:'Perbaikan besar'},
+const DESC={0:{dasar:'Pejuang menyerang',kecil:'Pejuwati lempar batu & peralatan',sedang:'Lempar botol api',kuat:'Roki Girang: sindiran pedas',ulti:'Ferdi Irwan dipanggil (ojol tabrak)',epik:'Retrobro: kembang api, Poli mundur & moral turun',besar:'Pasukan ojol bayangan 15 detik'},
             1:{dasar:'Poli menyerang',kecil:'Poli semprot air',sedang:'Bom asap dilempar',kuat:'Ratu Pajak: demonstran pusing',ulti:'Water cannon besar',epik:'Skill Raja Jaua',besar:'Raja Jaua: WHOOZZ!'}};
 const descOf=g=>DESC[sideOf(g)][tierOf(g.coins)[1]];
 const icon=(c,g)=>{const f=g&&findG(g.name);return f?f[3]:(sideOf(g||{name:'',coins:c})?'\u{1F6E1}':'\u{1F381}');};
@@ -5537,6 +5537,33 @@ function ojolGift(){try{let h=S.heroes.kangbewok;if(!h||h.dying){if(!(S.hcd.kang
   u._ride=true;u._oj=6;u.x=x0;u.y=y0;u.atk=0;u.mv=0;if(u.lane!==lane)setLane(u,lane);
   u._sk=9;L.bikes.push({u,x:x0,y:y0,ty:LANEY[lane]+oy,vx:(u===h?520:380+Math.random()*70),ferdi:u===h,hit:new Set(),stopAt:null,lane,life:(u===h?4:6)});
   tvF('L','bewok','tertawa','Ferdi Irwan & relawan ojol menabrak','Makin banyak dukungan, makin banyak relawan');toast('Ojol menabrak!');}catch(e){}}
+function fireworksGift(){try{
+  const dm=S.units.filter(u=>u.team===0&&!u.dying&&!u.riding&&!u.hero&&!u.tower&&!u.core&&!u.gate);
+  const fx0=dm.length?Math.max(...dm.map(u=>u.x)):300,y0=LANEY[1];
+  tvF('L','bewok','tertawa','Retrobro menembakkan kembang api','Poli mundur, moral aparat turun');toast('Retrobro: kembang api!');
+  const cols=['#ff4d6d','#ffd166','#6be0ff','#9dff6b','#ff9a1a','#d58bff'];
+  for(let r=0;r<5;r++){const rx=fx0-40+r*85+Math.random()*30;
+    later(r*.12,()=>{try{for(let q=0;q<10;q++)S.fx.push({x:rx,y:y0-10,vx:(Math.random()-.5)*14,vy:-330-Math.random()*60,life:.55,max:.55,col:'#fff3c0'});sfx('skill');}catch(e){}});
+    later(r*.12+.55,()=>{try{const bx=rx+10,by=y0-210+Math.random()*30,c=cols[r%cols.length];ring(bx,by,90,c);ring(bx,by,55,'#ffffff');
+      for(let q=0;q<40;q++){const a=q/40*6.28,sp=70+Math.random()*90;S.fx.push({x:bx,y:by,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp-30,life:.9+Math.random()*.4,max:1.3,col:q%3?c:'#fff'});}
+      S.shake=Math.max(S.shake||0,.18);sfx('boom');}catch(e){}});}
+  later(.7,()=>{try{let n=0;for(const o of S.units){if(o.team!==1||o.dying||o.riding||o.tower||o.core||o.gate)continue;
+      if(o.x>fx0-140&&o.x<fx0+620){if(!o.hero)o.x=Math.min(WW-6,o.x+110);o.stun=Math.max(o.stun||0,.8);n++;}}
+    L.adv=Math.max(-200,(L.adv||0)-160);const m=Math.min(S.morale[1],10);S.morale[1]-=m;S.morale[0]=100-S.morale[1];
+    floatText(fx0+160,y0-150,'Poli mundur! Moral -'+m,'#ffd166');}catch(e){}});
+}catch(e){}}
+function shadowOjol(){try{
+  const po=S.units.filter(u=>u.team===1&&u.type==='poli'&&!u.dying&&!u.riding);const pf=Math.min(...po.map(u=>u.x).concat([900]));
+  const have=S.units.filter(u=>u._shd>0&&!u.dying).length;if(have>=60)return;
+  tvF('L','bewok','tertawa','Pasukan ojol bayangan turun ke jalan','Makin banyak gift, makin banyak ojol');toast('Pasukan ojol bayangan!');
+  for(let i=0;i<6;i++){const lane=i%3,x=Math.max(20,pf-90-Math.random()*220);
+    const u=window.mk('prajurit',0,x,lane,1,{noNear:true});if(!u)continue;
+    u._shd=15;u._oj=5;u._sk=.5;u.dmg=(u.dmg||8)*1.5;u.hp=u.max=(u.max||30)*1.6;u.x=x;ring(u.x,u.y,60,'#19b84f');
+    for(let q=0;q<10;q++){const a=Math.random()*6.28;S.fx.push({x:u.x,y:u.y-20,vx:Math.cos(a)*70,vy:Math.sin(a)*70-60,life:.6,max:.6,col:'#19b84f'});}}
+  S.shake=Math.max(S.shake||0,.25);sfx('spawn');
+}catch(e){}}
+function updShadow(dt){for(const u of S.units){if(!(u._shd>0)||u.dying)continue;u._shd-=dt;u._oj=5;u._sk=Math.max(u._sk||0,.3);L.b0=Math.max(L.b0||0,6);
+    if(u._shd<=0){ring(u.x,u.y,50,'#19b84f');for(let q=0;q<8;q++){const a=Math.random()*6.28;S.fx.push({x:u.x,y:u.y-20,vx:Math.cos(a)*50,vy:Math.sin(a)*50-40,life:.5,max:.5,col:'#19b84f'});}u.hp=0;u.dying=.01;u.gone=true;}}}
 function updBikes(dt){const bs=L.bikes;if(!bs||!bs.length)return;
   for(const b of bs){const u=b.u;if(!u||u.dying||u.hp<=0){b.dead=true;if(u)u._ride=false;continue;}
     b.life-=dt;b.x+=b.vx*dt;b.y+=(b.ty-b.y)*Math.min(1,dt*3);u.x=b.x;u.y=b.y;u.oy=b.y-LANEY[u.lane];u.atk=0;u.mv=0;u._oj=Math.max(u._oj,5);
@@ -5588,9 +5615,9 @@ function apply0(g){
     else if(t==='kecil'){L.th=3;freeSpawn('pemanah');forceThrow();if(Math.random()<.4)lobSpecial(0);}
     else if(t==='sedang'){B(12);molotovVolley(1);}
     else if(t==='kuat'){B(12);rokiGift();try{gainMorale(0,8);}catch(e){}}
-    else if(t==='ulti'){B(16);molotovVolley(1);}
-    else if(t==='epik'){B(20);ojolGift();}
-    else{B(25);healAll();heroPower(true);}
+    else if(t==='ulti'){B(16);ojolGift();}
+    else if(t==='epik'){B(20);fireworksGift();}
+    else{B(25);shadowOjol();}
   }else{
     if(t==='dasar'){polReinf(1);strike(1);}
     else if(t==='kecil'){polReinf(2);waterShot();if(Math.random()<.4)lobSpecial(1);}
@@ -5783,7 +5810,7 @@ window.update=function(dt){const r=_u3.apply(this,arguments);
     for(const f of (S.firePatches||[]))if(f.life>2.5)f.life=2.5;
     stepAdv(dt);stepDash(dt);if(L.bt&&L.bt.fl>0)L.bt.fl-=dt;
     if(S.fx&&S.fx.length&&!(L.fxT>0)){const quiet=!(L.b0>0||L.b1>0||L.burst>0);for(let q=S.fx.length-1;q>=0;q--){const f=S.fx[q];if(f.text||f._k)continue;if(quiet||f.col==='#a5611c'||f.col==='#ff8fb8')S.fx.splice(q,1);}if(quiet)S.shake=0;}
-    updBikes(dt);updWater(dt);L.fT=Math.max(0,(L.fT||0)-dt);
+    updBikes(dt);updShadow(dt);updWater(dt);L.fT=Math.max(0,(L.fT||0)-dt);
     L.rkT=Math.max(0,(L.rkT||0)-dt);
     if(L.rkq>0&&L.rkT<=0){const h=S.heroes.rokigirang;if(h&&!h.dying&&!(h.stun>0)){const po=S.units.filter(o=>o.team===1&&o.hp>0&&!o.dying&&!o.riding&&!o.exiting&&!o.tower&&!o.core&&!o.gate);
       if(po.length){const t=po[Math.floor(Math.random()*po.length)];try{L.rkFire=true;fireGirangWord(h,t,false);}catch(e){}L.rkFire=false;L.rkq--;L.rkT=.22;}}else L.rkq=0;}
@@ -5852,7 +5879,7 @@ window.update=function(dt){const r=_u4.apply(this,arguments);
     for(const d of D)if(d.x>pf-170)d.x=Math.max(2,d.x+mv);
   }catch(e){}
   return r;};
-const VTAG='b2699';
+const VTAG='b2700';
 function tagTitle(){try{const o=document.getElementById('overlay');const bx=o&&o.querySelector('.box');if(bx&&bx.querySelector('h1')&&!bx.querySelector('.vtag')){const d=document.createElement('div');d.className='vtag';d.style.cssText='margin-top:10px;font:11px monospace;color:#8fa3b8;opacity:.85';d.textContent='Versi TikTok LIVE · '+VTAG;bx.appendChild(d);}}catch(e){}}
 const _ts=window.titleScreen;
 if(typeof _ts==='function')window.titleScreen=function(){const r=_ts.apply(this,arguments);tagTitle();return r;};
