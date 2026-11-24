@@ -5307,6 +5307,7 @@ try{if(S&&!S.capture){const any=S.units.some(o=>o.team===0&&!o.dying&&!o.riding&
         if(b1&&!b0)L.adv=Math.min(1250,(L.adv||0)+(4.5+Math.max(0,S.morale[1]-50)*.12)*dt*(L.wet>0?1.5:1));   // gift Poli: barisan maju mendorong demonstran
         else if(!b0&&!b1){const a=L.adv||0;L.adv=a>0?Math.max(0,a-9*dt):Math.min(0,a+9*dt);}
         else if(b0&&!b1)L.adv=Math.max(-200,(L.adv||0)-(4.5+Math.max(0,S.morale[0]-50)*.12)*dt);} // gift demo: Poli terdorong mundur
+      {const b1=sideB(1)>0,b0=sideB(0)>0;if(b0!==b1&&!S.over){const vt=b1?0:1;L.md=(L.md||0)+.7*dt;if(L.md>=1){const n=Math.floor(L.md);L.md-=n;S.morale[vt]=Math.max(0,S.morale[vt]-n);S.morale[1-vt]=100-S.morale[vt];}}} // diserang: morale turun perlahan
       S.policeAdvance=Math.max(0,Math.min(180,L.adv||0));}}catch(e){}
   try{if(S&&!S.capture&&!S.over){ // jumlah minimum: pasukan tidak boleh kosong, auto respawn (tanpa gift hanya menahan)
       // kamera: kalau demonstran habis, sorot Poli (bukan sisa demonstran)
@@ -5330,7 +5331,9 @@ window.GiftIn=function(g){
   if(!g||L.q.length>400)return;
   const n=Math.max(1,Math.min(100,+g.count||1)),c=Math.max(1,+g.coins||1);
   const gg={name:String(g.name||'Gift'),coins:c,user:String(g.user||'Penonton'),count:n};
-  addFeed(gg);for(let i=0;i<n;i++)L.q.push(gg);
+  addFeed(gg);let m=n;
+  if(c>=99&&S&&!S.over&&!S.paused){try{apply(gg);m--;}catch(e){}}   // gift besar: langsung keluar tanpa antrian (sisanya antre)
+  for(let i=0;i<m;i++)L.q.push(gg);
 };
 window.fakeGift=(name,coins,user,count)=>window.GiftIn({name:name||'Rose',coins:coins==null?1:coins,user:user||'Tester',count:count||1});
 window.LiveEvent=function(kind,user){ // like/comment/follow: pulihkan sedikit HP satu hero
@@ -5849,7 +5852,7 @@ window.update=function(dt){const r=_u4.apply(this,arguments);
     for(const d of D)if(d.x>pf-170)d.x=Math.max(2,d.x+mv);
   }catch(e){}
   return r;};
-const VTAG='b2697';
+const VTAG='b2699';
 function tagTitle(){try{const o=document.getElementById('overlay');const bx=o&&o.querySelector('.box');if(bx&&bx.querySelector('h1')&&!bx.querySelector('.vtag')){const d=document.createElement('div');d.className='vtag';d.style.cssText='margin-top:10px;font:11px monospace;color:#8fa3b8;opacity:.85';d.textContent='Versi TikTok LIVE · '+VTAG;bx.appendChild(d);}}catch(e){}}
 const _ts=window.titleScreen;
 if(typeof _ts==='function')window.titleScreen=function(){const r=_ts.apply(this,arguments);tagTitle();return r;};
