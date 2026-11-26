@@ -1,0 +1,9 @@
+{
+  "name": "aod-live-bridge",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Menghubungkan TikTok LIVE ke game Attack on DEPR (aod_live) lewat GiftIn/LiveEvent",
+  "scripts": { "start": "node server.js" },
+  "engines": { "node": ">=18" },
+  "dependencies": { "tiktok-live-connector": "^2.0.0" }
+}
