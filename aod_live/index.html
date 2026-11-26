@@ -2367,7 +2367,8 @@ if(typeof _vc==='function')window.verticalCamera=function(dt){
 // kamera: selalu ke bentrokan tengah; sorotan hanya dari gift & singkat (kendaraan balik dll diabaikan)
 const _cf=window.camFocus;
 if(typeof _cf==='function')window.camFocus=function(x,t){if(!(L.mg||L.allowKing))return;return _cf.call(this,x,Math.min(t||1.2,1.2));};
-if(typeof CAMERA_ZOOM==='object'&&!L.zd){L.zd=1;CAMERA_ZOOM.portrait*=0.81;CAMERA_ZOOM.landscape*=0.81;try{if(typeof resize==='function')resize();}catch(e){}}
+const LANDSCAPE_ZOOM_OUT=0.9; // zoom-out khusus landscape (1 = tanpa perubahan, 0.9 = 10% lebih jauh); portrait tidak berubah
+if(typeof CAMERA_ZOOM==='object'&&!L.zd){L.zd=1;CAMERA_ZOOM.portrait*=0.81;CAMERA_ZOOM.landscape*=0.81*LANDSCAPE_ZOOM_OUT;try{if(typeof resize==='function')resize();}catch(e){}}
 // landscape: panel TV diperbesar (120%) agar terbaca
 const _dtv=window.drawTV;
 if(typeof _dtv==='function')window.drawTV=function(){
